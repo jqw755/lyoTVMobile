@@ -187,7 +187,9 @@ const mockDetail = {
 
 export function init(sites) {
   console.log('[API] init 传入订阅地址:', sites)
-  return callPlugin('init', { url: sites })
+  // init 需下载订阅源，网络耗时较长；超时设为 35s，超过 OkHttp 的 30s，
+  // 让插件侧真正的网络错误（DNS/cleartext/连接失败）能回调出来，而非被前端抢超时掩盖
+  return callPlugin('init', { url: sites }, 35000)
 }
 
 export function home() {

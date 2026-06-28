@@ -31,6 +31,46 @@ if (uni.restoreGlobal) {
 }
 (function(vue) {
   "use strict";
+  const ON_SHOW = "onShow";
+  const ON_LOAD = "onLoad";
+  const ON_RESIZE = "onResize";
+  const ON_PULL_DOWN_REFRESH = "onPullDownRefresh";
+  function requireNativePlugin(name) {
+    return weex.requireModule(name);
+  }
+  function formatAppLog(type, filename, ...args) {
+    if (uni.__log__) {
+      uni.__log__(type, filename, ...args);
+    } else {
+      console[type].apply(console, [...args, filename]);
+    }
+  }
+  function resolveEasycom(component, easycom) {
+    return typeof component === "string" ? easycom : component;
+  }
+  const createLifeCycleHook = (lifecycle, flag = 0) => (hook, target = vue.getCurrentInstance()) => {
+    !vue.isInSSRComponentSetup && vue.injectHook(lifecycle, hook, target);
+  };
+  const onShow = /* @__PURE__ */ createLifeCycleHook(
+    ON_SHOW,
+    1 | 2
+    /* HookFlags.PAGE */
+  );
+  const onLoad = /* @__PURE__ */ createLifeCycleHook(
+    ON_LOAD,
+    2
+    /* HookFlags.PAGE */
+  );
+  const onResize = /* @__PURE__ */ createLifeCycleHook(
+    ON_RESIZE,
+    2
+    /* HookFlags.PAGE */
+  );
+  const onPullDownRefresh = /* @__PURE__ */ createLifeCycleHook(
+    ON_PULL_DOWN_REFRESH,
+    2
+    /* HookFlags.PAGE */
+  );
   const fontData = [
     {
       "font_class": "arrow-down",
@@ -758,46 +798,63 @@ if (uni.restoreGlobal) {
     );
   }
   const __easycom_0$2 = /* @__PURE__ */ _export_sfc(_sfc_main$c, [["render", _sfc_render$c], ["__scopeId", "data-v-946bce22"], ["__file", "D:/jqw/project/lyoTVMobile/node_modules/@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue"]]);
-  const ON_SHOW = "onShow";
-  const ON_LOAD = "onLoad";
-  const ON_RESIZE = "onResize";
-  const ON_PULL_DOWN_REFRESH = "onPullDownRefresh";
-  function requireNativePlugin(name) {
-    return weex.requireModule(name);
-  }
-  function formatAppLog(type, filename, ...args) {
-    if (uni.__log__) {
-      uni.__log__(type, filename, ...args);
-    } else {
-      console[type].apply(console, [...args, filename]);
-    }
-  }
-  function resolveEasycom(component, easycom) {
-    return typeof component === "string" ? easycom : component;
-  }
-  const createLifeCycleHook = (lifecycle, flag = 0) => (hook, target = vue.getCurrentInstance()) => {
-    !vue.isInSSRComponentSetup && vue.injectHook(lifecycle, hook, target);
+  const scriptRel = "modulepreload";
+  const assetsURL = function(dep) {
+    return "/" + dep;
   };
-  const onShow = /* @__PURE__ */ createLifeCycleHook(
-    ON_SHOW,
-    1 | 2
-    /* HookFlags.PAGE */
-  );
-  const onLoad = /* @__PURE__ */ createLifeCycleHook(
-    ON_LOAD,
-    2
-    /* HookFlags.PAGE */
-  );
-  const onResize = /* @__PURE__ */ createLifeCycleHook(
-    ON_RESIZE,
-    2
-    /* HookFlags.PAGE */
-  );
-  const onPullDownRefresh = /* @__PURE__ */ createLifeCycleHook(
-    ON_PULL_DOWN_REFRESH,
-    2
-    /* HookFlags.PAGE */
-  );
+  const seen = {};
+  const __vitePreload = function preload(baseModule, deps, importerUrl) {
+    let promise = Promise.resolve();
+    if (false) {
+      const links = document.getElementsByTagName("link");
+      const cspNonceMeta = document.querySelector("meta[property=csp-nonce]");
+      const cspNonce = (cspNonceMeta == null ? void 0 : cspNonceMeta.nonce) || (cspNonceMeta == null ? void 0 : cspNonceMeta.getAttribute("nonce"));
+      promise = Promise.all(deps.map((dep) => {
+        dep = assetsURL(dep);
+        if (dep in seen)
+          return;
+        seen[dep] = true;
+        const isCss = dep.endsWith(".css");
+        const cssSelector = isCss ? '[rel="stylesheet"]' : "";
+        const isBaseRelative = !!importerUrl;
+        if (isBaseRelative) {
+          for (let i2 = links.length - 1; i2 >= 0; i2--) {
+            const link2 = links[i2];
+            if (link2.href === dep && (!isCss || link2.rel === "stylesheet")) {
+              return;
+            }
+          }
+        } else if (document.querySelector(`link[href="${dep}"]${cssSelector}`)) {
+          return;
+        }
+        const link = document.createElement("link");
+        link.rel = isCss ? "stylesheet" : scriptRel;
+        if (!isCss) {
+          link.as = "script";
+          link.crossOrigin = "";
+        }
+        link.href = dep;
+        if (cspNonce) {
+          link.setAttribute("nonce", cspNonce);
+        }
+        document.head.appendChild(link);
+        if (isCss) {
+          return new Promise((res, rej) => {
+            link.addEventListener("load", res);
+            link.addEventListener("error", () => rej(new Error(`Unable to preload CSS for ${dep}`)));
+          });
+        }
+      }));
+    }
+    return promise.then(() => baseModule()).catch((err) => {
+      const e = new Event("vite:preloadError", { cancelable: true });
+      e.payload = err;
+      window.dispatchEvent(e);
+      if (!e.defaultPrevented) {
+        throw err;
+      }
+    });
+  };
   const SUB_KEY = "lyotv_sub_url";
   const store = vue.reactive({
     /** 当前订阅地址 */
@@ -815,15 +872,30 @@ if (uni.restoreGlobal) {
     store.classes = data["class"] || data.classes || [];
     store.homeList = data.list || [];
   }
+  const appState = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    setSubUrl,
+    store,
+    updateHome
+  }, Symbol.toStringTag, { value: "Module" }));
   const PLUGIN_NAME = "Fongmi-VodPlugin";
   let vodPlugin = null;
   function getPlugin() {
     if (vodPlugin)
       return vodPlugin;
+    formatAppLog("log", "at utils/api.js:14", "[插件] 开始 requireNativePlugin:", PLUGIN_NAME);
     try {
       vodPlugin = requireNativePlugin(PLUGIN_NAME);
+      if (vodPlugin) {
+        const methods = [];
+        for (const k in vodPlugin)
+          methods.push(k);
+        formatAppLog("log", "at utils/api.js:20", "[插件] 加载成功，暴露方法:", methods.join(", ") || "(无)");
+      } else {
+        formatAppLog("error", "at utils/api.js:22", "[插件] requireNativePlugin 返回 null，插件未注册到基座");
+      }
     } catch (e) {
-      formatAppLog("warn", "at utils/api.js:17", "原生插件未就绪，使用模拟数据模式");
+      formatAppLog("error", "at utils/api.js:25", "[插件] requireNativePlugin 抛错:", e && e.message, e);
       vodPlugin = null;
     }
     return vodPlugin;
@@ -835,20 +907,76 @@ if (uni.restoreGlobal) {
         resolve(getMockData(method));
         return;
       }
-      const timer = setTimeout(() => {
-        reject(new Error(`插件 ${method} 超时 (${timeout}ms)`));
-      }, timeout);
-      formatAppLog("log", "at utils/api.js:36", `[插件] 调用 ${method}`, JSON.stringify(args));
-      plugin[method](args, (ret) => {
+      let settled = false;
+      const finish = (fn, val) => {
+        if (settled)
+          return;
+        settled = true;
         clearTimeout(timer);
-        formatAppLog("log", "at utils/api.js:39", `[插件] ${method} 返回`, JSON.stringify(ret));
-        if (ret && ret.code === 0) {
-          resolve(ret.data ? JSON.parse(ret.data) : ret);
-        } else {
-          reject(new Error((ret == null ? void 0 : ret.msg) || "插件调用失败"));
-        }
-      });
+        fn(val);
+      };
+      const timer = setTimeout(() => {
+        formatAppLog("error", "at utils/api.js:50", `[插件] ${method} 超时 (${timeout}ms)，回调始终未触发`);
+        finish(reject, new Error(`插件 ${method} 超时 (${timeout}ms)`));
+      }, timeout);
+      formatAppLog("log", "at utils/api.js:54", `[插件] 调用 ${method}`, JSON.stringify(args));
+      try {
+        plugin[method](args, (ret) => {
+          formatAppLog("log", "at utils/api.js:57", `[插件] ${method} 回调触发`, JSON.stringify(ret));
+          if (!ret) {
+            formatAppLog("error", "at utils/api.js:60", `[插件] ${method} 返回空结果`);
+            return finish(reject, new Error("插件返回空结果"));
+          }
+          const hasCode = typeof ret.code !== "undefined";
+          const ok = !hasCode || ret.code === 0 || ret.code === 200;
+          if (!ok) {
+            formatAppLog("error", "at utils/api.js:67", `[插件] ${method} 失败 code=${ret.code} msg=${ret.msg}`);
+            return finish(reject, new Error(ret.msg || `插件调用失败 code=${ret.code}`));
+          }
+          const data = ret.data;
+          let parsed;
+          if (data === void 0 || data === null || data === "") {
+            parsed = ret;
+          } else if (typeof data === "string") {
+            try {
+              parsed = JSON.parse(data);
+            } catch (e) {
+              formatAppLog("warn", "at utils/api.js:78", `[插件] ${method} data 不是合法 JSON，按原始字符串返回`);
+              parsed = data;
+            }
+          } else {
+            parsed = data;
+          }
+          formatAppLog("log", "at utils/api.js:85", `[插件] ${method} 解析完成`, JSON.stringify(parsed).substring(0, 300));
+          finish(resolve, parsed);
+        });
+      } catch (e) {
+        formatAppLog("error", "at utils/api.js:90", `[插件] ${method} 调用同步抛错:`, e && e.message, e);
+        finish(reject, new Error(`插件调用异常: ${e.message}`));
+      }
     });
+  }
+  async function initApp() {
+    var _a, _b;
+    formatAppLog("log", "at utils/api.js:98", "[App] initApp 启动，订阅地址:", store.subUrl || "(空)");
+    if (!store.subUrl) {
+      formatAppLog("log", "at utils/api.js:100", "[App] 无订阅地址，跳过");
+      return;
+    }
+    try {
+      formatAppLog("log", "at utils/api.js:104", "[App] 步骤1/2 调用 init 加载订阅源...");
+      const initRet = await callPlugin("init", { url: store.subUrl });
+      formatAppLog("log", "at utils/api.js:106", "[App] init 完成", JSON.stringify(initRet).substring(0, 200));
+      formatAppLog("log", "at utils/api.js:107", "[App] 步骤2/2 调用 home 获取首页...");
+      const homeData = await callPlugin("home");
+      formatAppLog("log", "at utils/api.js:109", "[App] home 完成, class=", (_a = homeData == null ? void 0 : homeData.class) == null ? void 0 : _a.length, "list=", (_b = homeData == null ? void 0 : homeData.list) == null ? void 0 : _b.length);
+      const { updateHome: updateHome2 } = await __vitePreload(() => Promise.resolve().then(() => appState), false ? "__VITE_PRELOAD__" : void 0);
+      updateHome2(homeData);
+      return homeData;
+    } catch (e) {
+      formatAppLog("error", "at utils/api.js:114", "[App] 自动加载订阅失败:", e && e.message, e);
+      return null;
+    }
   }
   function getMockData(method, args) {
     switch (method) {
@@ -912,9 +1040,11 @@ if (uni.restoreGlobal) {
     vod_content: "这是一段影视简介，描述剧情内容。讲述了在某个时代背景下，主人公经历了一系列冒险与成长的故事。剧情跌宕起伏，引人入胜。"
   };
   function init(sites) {
-    return callPlugin("init", { url: sites });
+    formatAppLog("log", "at utils/api.js:189", "[API] init 传入订阅地址:", sites);
+    return callPlugin("init", { url: sites }, 35e3);
   }
   function home() {
+    formatAppLog("log", "at utils/api.js:196", "[API] home 请求首页数据");
     return callPlugin("home");
   }
   function category(tid, page = 1, extend = {}) {
@@ -1154,6 +1284,13 @@ if (uni.restoreGlobal) {
           list.value = store.homeList;
           return;
         }
+        if (!store.subUrl) {
+          uni.showToast({ title: '请先在"我的"设置订阅源', icon: "none" });
+          return;
+        }
+        await loadHome();
+      });
+      async function loadHome() {
         try {
           const data = await home();
           classes.value = data["class"] || data.classes || [];
@@ -1161,8 +1298,13 @@ if (uni.restoreGlobal) {
           updateHome(data);
           activeTid.value = "";
         } catch (e) {
-          uni.showToast({ title: "加载失败", icon: "none" });
+          formatAppLog("error", "at pages/index/index.vue:101", "[首页] 加载失败:", e && e.message, e);
+          uni.showToast({ title: (e == null ? void 0 : e.message) || "加载失败", icon: "none" });
         }
+      }
+      uni.$on("subUpdated", () => {
+        if (store.homeList.length === 0)
+          loadHome();
       });
       async function onCategoryChange(item) {
         activeTid.value = item.type_id;
@@ -1182,7 +1324,7 @@ if (uni.restoreGlobal) {
         addHistory(item);
         uni.navigateTo({ url: `/pages/detail/detail?id=${item.vod_id}` });
       }
-      const __returned__ = { RECOMMEND_TAB, classes, list, activeTid, page, imageSize, gridStyle, tabList, onCategoryChange, goDetail, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, watch: vue.watch, get home() {
+      const __returned__ = { RECOMMEND_TAB, classes, list, activeTid, page, imageSize, gridStyle, tabList, loadHome, onCategoryChange, goDetail, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, watch: vue.watch, get home() {
         return home;
       }, get category() {
         return category;
@@ -3365,21 +3507,29 @@ if (uni.restoreGlobal) {
         uni.showToast({ title: size === "large" ? "大图模式" : size === "medium" ? "中图模式" : "小图模式", icon: "none" });
       }
       async function submitSub() {
+        var _a, _b;
         const url = subUrl.value.trim();
         if (!url)
           return;
+        formatAppLog("log", "at pages/mine/mine.vue:168", "[订阅] 用户输入地址:", url);
         try {
           uni.showLoading({ title: "加载订阅..." });
+          formatAppLog("log", "at pages/mine/mine.vue:171", "[订阅] 步骤1/2 init 加载订阅源...");
           await init(url);
-          const data = await home();
+          formatAppLog("log", "at pages/mine/mine.vue:173", "[订阅] init 成功");
           setSubUrl(url);
+          formatAppLog("log", "at pages/mine/mine.vue:176", "[订阅] 步骤2/2 home 获取首页...");
+          const data = await home();
+          formatAppLog("log", "at pages/mine/mine.vue:178", "[订阅] home 成功, class=", (_a = data == null ? void 0 : data.class) == null ? void 0 : _a.length, "list=", (_b = data == null ? void 0 : data.list) == null ? void 0 : _b.length);
           updateHome(data);
+          uni.$emit("subUpdated");
           uni.hideLoading();
           uni.showToast({ title: "订阅成功", icon: "success" });
           subUrl.value = "";
         } catch (e) {
+          formatAppLog("error", "at pages/mine/mine.vue:186", "[订阅] 失败:", e && e.message, e);
           uni.hideLoading();
-          uni.showToast({ title: "订阅加载失败", icon: "none" });
+          uni.showToast({ title: e && e.message ? e.message : "订阅加载失败", icon: "none" });
         }
       }
       function goPage(page) {
@@ -3924,6 +4074,7 @@ if (uni.restoreGlobal) {
         uni.$on("themeChange", (val) => {
           isLight.value = val === "light";
         });
+        initApp();
       });
       if (typeof uni !== "undefined") {
         uni.$lyotvTheme = {
@@ -3937,7 +4088,9 @@ if (uni.restoreGlobal) {
           }
         };
       }
-      const __returned__ = { isLight, themeClass, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted };
+      const __returned__ = { isLight, themeClass, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, get initApp() {
+        return initApp;
+      } };
       Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
       return __returned__;
     }
