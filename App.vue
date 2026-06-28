@@ -8,6 +8,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { initApp } from '@/utils/api.js'
 
 const isLight = ref(false)
 const themeClass = computed(() => isLight.value ? 'light' : '')
@@ -21,6 +22,8 @@ onMounted(() => {
   uni.$on('themeChange', (val) => {
     isLight.value = val === 'light'
   })
+  // 启动时自动加载已存储的订阅源并拉取首页
+  initApp()
 })
 
 // 暴露给全局使用

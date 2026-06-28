@@ -2,8 +2,8 @@
     "name" : "lyoTV",
     "appid" : "__UNI__8112C78",
     "description" : "乐意欧TV",
-    "versionName" : "1.0.0",
-    "versionCode" : "100",
+    "versionName" : "1.0.1",
+    "versionCode" : 101,
     "transformPx" : false,
     "app-plus" : {
         "usingComponents" : true,

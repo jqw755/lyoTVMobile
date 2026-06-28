@@ -81,6 +81,16 @@ onMounted(async () => {
     list.value = store.homeList
     return
   }
+  // 没有订阅源时不主动请求 home，避免插件空转返回空
+  if (!store.subUrl) {
+    uni.showToast({ title: '请先在"我的"设置订阅源', icon: 'none' })
+    return
+  }
+  await loadHome()
+})
+
+/** 订阅源已设置后，加载首页数据 */
+async function loadHome() {
   try {
     const data = await home()
     classes.value = data["class"] || data.classes || []
@@ -88,8 +98,14 @@ onMounted(async () => {
     updateHome(data)
     activeTid.value = ''
   } catch (e) {
-    uni.showToast({ title: '加载失败', icon: 'none' })
+    console.error('[首页] 加载失败:', e && e.message, e)
+    uni.showToast({ title: e?.message || '加载失败', icon: 'none' })
   }
+}
+
+// 个人中心设置订阅源成功后，通知首页重新加载
+uni.$on('subUpdated', () => {
+  if (store.homeList.length === 0) loadHome()
 })
 
 async function onCategoryChange(item) {

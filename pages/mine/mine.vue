@@ -165,18 +165,27 @@ function setImgSize(size) {
 async function submitSub() {
   const url = subUrl.value.trim()
   if (!url) return
+  console.log('[订阅] 用户输入地址:', url)
   try {
     uni.showLoading({ title: '加载订阅...' })
+    console.log('[订阅] 步骤1/2 init 加载订阅源...')
     await apiInit(url)
-    const data = await home()
+    console.log('[订阅] init 成功')
+    // 先存订阅地址，首页据此判断是否可请求 home
     setSubUrl(url)
+    console.log('[订阅] 步骤2/2 home 获取首页...')
+    const data = await home()
+    console.log('[订阅] home 成功, class=', data?.class?.length, 'list=', data?.list?.length)
     updateHome(data)
+    // 通知首页（若已打开）刷新数据
+    uni.$emit('subUpdated')
     uni.hideLoading()
     uni.showToast({ title: '订阅成功', icon: 'success' })
     subUrl.value = ''
   } catch (e) {
+    console.error('[订阅] 失败:', e && e.message, e)
     uni.hideLoading()
-    uni.showToast({ title: '订阅加载失败', icon: 'none' })
+    uni.showToast({ title: e && e.message ? e.message : '订阅加载失败', icon: 'none' })
   }
 }
 
