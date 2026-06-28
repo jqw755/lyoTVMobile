@@ -1,0 +1,57 @@
+{
+    "name" : "lyoTV",
+    "appid" : "__UNI__8112C78",
+    "description" : "乐意欧TV",
+    "versionName" : "1.0.0",
+    "versionCode" : "100",
+    "transformPx" : false,
+    "app-plus" : {
+        "usingComponents" : true,
+        "nviceCompiler" : "uni-app",
+        "compilerVersion" : 3,
+        "splashscreen" : {
+            "alwaysShowBeforeRender" : true,
+            "waiting" : true,
+            "autoclose" : true,
+            "delay" : 0
+        },
+        "plugins" : {
+            "Fongmi-VodPlugin" : {
+                "version" : "1.0.0",
+                "provider" : "com.fongmi.vod"
+            }
+        },
+        "distribute" : {
+            "ios" : {
+                "dSYMs" : false
+            }
+        },
+        "nativePlugins" : {
+            "Fongmi-VodPlugin" : {
+                "__plugin_info__" : {
+                    "name" : "Fongmi-VodPlugin",
+                    "description" : "CatVod 源解析原生插件",
+                    "platforms" : "Android",
+                    "url" : "",
+                    "android_package_name" : "",
+                    "ios_bundle_id" : "",
+                    "isCloud" : false,
+                    "bought" : -1,
+                    "pid" : "",
+                    "parameters" : {}
+                }
+            }
+        }
+    },
+    "quickapp" : {},
+    "mp-weixin" : {
+        "appid" : "",
+        "setting" : {
+            "urlCheck" : false
+        }
+    },
+    "uniStatistics" : {
+        "enable" : false
+    },
+    "vueVersion" : "3"
+}
