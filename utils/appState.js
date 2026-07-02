@@ -13,6 +13,8 @@ export const store = reactive({
   classes: [],
   /** 首页推荐列表 */
   homeList: [],
+  /** 可搜索站点列表（[{key, name}]） */
+  sites: [],
 })
 
 export function setSubUrl(url) {
@@ -23,4 +25,8 @@ export function setSubUrl(url) {
 export function updateHome(data) {
   store.classes = data["class"] || data.classes || []
   store.homeList = data.list || []
+}
+
+export function updateSites(list) {
+  store.sites = list || []
 }

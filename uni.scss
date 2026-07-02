@@ -1,49 +1,57 @@
-/* 全局样式变量 — 深色主题（默认） */
-$theme-bg: #141414;
-$theme-card: #1e1e1e;
-$theme-card-hover: #2a2a2a;
-$theme-text: #ffffff;
-$theme-text-secondary: #999999;
+/* 全局样式变量 — 浅色主题（默认） */
+$theme-bg: #f4f4f4;
+$theme-card: #ffffff;
+$theme-card-hover: #e8e8e8;
+$theme-text: #000000;
+$theme-text-secondary: #666666;
 $theme-accent: #e74c3c;
 $theme-accent-dark: #c0392b;
-$theme-border: #333333;
+$theme-border: #dddddd;
 $theme-success: #27ae60;
 $theme-warning: #f39c12;
 $theme-radius: 8rpx;
 $theme-radius-lg: 12rpx;
-$theme-nav: #1a1a1a;
-$theme-input: #1e1e1e;
+$theme-nav: #ffffff;
+$theme-input: #ffffff;
+
+/* 新增语义化变量名 */
+$text-primary: #000000;
+$bg-primary: #f4f4f4;
 
 /* CSS 自定义属性 — 支持运行时主题切换 */
 page {
-  --bg: #141414;
-  --card: #1e1e1e;
-  --card-hover: #2a2a2a;
-  --text: #ffffff;
-  --text-secondary: #999999;
-  --border: #333333;
-  --accent: #e74c3c;
-  --nav: #1a1a1a;
-  --input: #1e1e1e;
-  --page-bg: #141414;
-
-  background-color: var(--page-bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-/* 浅色主题 */
-.light {
-  --bg: #f5f5f5;
+  --bg: #f4f4f4;
   --card: #ffffff;
-  --card-hover: #eeeeee;
-  --text: #222222;
-  --text-secondary: #888888;
+  --card-hover: #e8e8e8;
+  --text: #000000;
+  --text-primary: #000000;
+  --text-secondary: #666666;
   --border: #dddddd;
   --accent: #e74c3c;
   --nav: #ffffff;
   --input: #ffffff;
-  --page-bg: #f5f5f5;
+  --page-bg: #f4f4f4;
+  --bg-primary: #f4f4f4;
+
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 浅色主题（与新默认值一致，保留以备切换） */
+.light {
+  --bg: #f4f4f4;
+  --card: #ffffff;
+  --card-hover: #e8e8e8;
+  --text: #000000;
+  --text-primary: #000000;
+  --text-secondary: #666666;
+  --border: #dddddd;
+  --accent: #e74c3c;
+  --nav: #ffffff;
+  --input: #ffffff;
+  --page-bg: #f4f4f4;
+  --bg-primary: #f4f4f4;
 }
 
 /* 浅色主题导航栏 */

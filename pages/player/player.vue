@@ -15,14 +15,35 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { player } from '@/utils/api.js'
 import { addHistory } from '@/utils/store.js'
+import { getSetting } from '@/utils/store.js'
 import MuiPlayer from 'mui-player'
 import 'mui-player/dist/mui-player.min.css'
+
+const SETTING_KEY = 'video_muted'
 
 const loading = ref(true)
 const pageFlag = ref('')
 const pageId = ref('')
 const pageName = ref('')
 let mp = null
+
+// 从设置读取默认静音状态
+function getMutedSetting() {
+  return getSetting(SETTING_KEY, true)
+}
+
+// 更新 MuiPlayer 的静音状态
+function updateMuted(val) {
+  if (!mp) return
+  try {
+    mp.muted = val
+  } catch (e) {
+    // 后备方案：重新设置 options
+    try {
+      mp.updateOptions({ muted: val })
+    } catch {}
+  }
+}
 
 onLoad((options) => {
   pageFlag.value = options?.flag || ''
@@ -43,6 +64,9 @@ onMounted(async () => {
 
     await nextTick()
 
+    // 获取静音设置
+    const mutedVal = getMutedSetting()
+
     // 初始化 MuiPlayer
     mp = new MuiPlayer({
       container: '#mui-player',
@@ -50,7 +74,7 @@ onMounted(async () => {
       title: pageName.value || '',
       autoplay: true,
       preload: 'auto',
-      muted: false,
+      muted: mutedVal,
       width: '100%',
       height: '100%',
       poster: '',
@@ -70,6 +94,11 @@ onMounted(async () => {
     mp.on('fullscreenExit', () => {
       uni.navigateBack()
     })
+
+    // 监听设置页发出的静音变更事件
+    uni.$on('mutedChanged', (val) => {
+      updateMuted(val)
+    })
   } catch (e) {
     loading.value = false
     uni.showToast({ title: '播放地址解析失败', icon: 'none' })
@@ -77,6 +106,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  // 移除事件监听
+  uni.$off('mutedChanged')
   if (mp) {
     mp.destroy()
     mp = null

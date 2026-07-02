@@ -7,8 +7,8 @@
   "id": "__UNI__8112C78",
   "name": "lyoTV",
   "version": {
-    "name": "1.0.2",
-    "code": 102
+    "name": "1.0.5",
+    "code": 105
   },
   "description": "乐意欧TV",
   "developer": {
@@ -42,7 +42,7 @@
     "compilerVersion": 3,
     "plugins": {
       "Fongmi-VodPlugin": {
-        "version": "1.0.0",
+        "version": "1.0.1",
         "provider": "com.fongmi.vod"
       }
     },

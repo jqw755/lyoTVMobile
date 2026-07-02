@@ -1,7 +1,7 @@
 <template>
   <view :class="themeClass">
     <page-meta
-      :page-style="'overflow:hidden;background:' + (isLight ? '#f5f5f5' : '#141414')"
+      :page-style="'overflow:hidden;background:#f4f4f4'"
     />
   </view>
 </template>

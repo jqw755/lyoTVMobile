@@ -32,7 +32,10 @@ defineEmits(['change'])
 <style lang="scss" scoped>
 .nav-wrapper {
   padding: 12rpx 0;
-  background: var(--page-bg);
+  background: var(--bg-primary);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .category-nav {

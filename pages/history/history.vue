@@ -78,7 +78,7 @@ function onClear() {
 
 function goDetail(item) {
   addHistory(item)
-  uni.navigateTo({ url: `/pages/detail/detail?id=${item.vod_id}` })
+  uni.navigateTo({ url: `/pages/detail/detail?id=${item.vod_id}&key=${item.site_key || ''}` })
 }
 
 function formatTime(ts) {
@@ -103,7 +103,7 @@ function pad(n) {
 <style lang="scss" scoped>
 .page {
   min-height: 100vh;
-  background: var(--page-bg);
+  background: var(--bg-primary);
 }
 
 .empty {

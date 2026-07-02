@@ -10,11 +10,14 @@
     "build:app": "uni build -p app"
   },
   "dependencies": {
-    "@dcloudio/uni-ui": "^1.5.12",
     "mui-player": "^1.8.1",
     "vue": "^3.5.39"
   },
   "uni-app": {
     "scripts": {}
+  },
+  "devDependencies": {
+    "@dcloudio/uni-app": "^3.0.0-alpha-5010420260626001",
+    "@dcloudio/uni-ui": "^1.5.12"
   }
 }

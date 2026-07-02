@@ -55,6 +55,7 @@ export function addHistory(vod, episode = '', progress = 0) {
     vod_name: vod.vod_name,
     vod_pic: vod.vod_pic,
     vod_remarks: vod.vod_remarks,
+    site_key: vod.site_key || '',
     episode,
     progress,
     time: Date.now(),

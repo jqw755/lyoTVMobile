@@ -7,16 +7,18 @@
   "id": "__UNI__8112C78",
   "name": "lyoTV",
   "version": {
-    "name": "1.0.2",
-    "code": 102
+    "name": "1.0.5",
+    "code": 105
   },
-  "description": "乐意欧TV",
+  "description": "乐意欧影视",
   "developer": {
     "name": "",
     "email": "",
     "url": ""
   },
   "permissions": {
+    "LivePusher": {},
+    "VideoPlayer": {},
     "UniNView": {
       "description": "UniNView原生渲染"
     }
@@ -42,13 +44,14 @@
     "compilerVersion": 3,
     "plugins": {
       "Fongmi-VodPlugin": {
-        "version": "1.0.0",
+        "version": "1.0.1",
         "provider": "com.fongmi.vod"
       }
     },
     "distribute": {
       "apple": {
-        "dSYMs": false
+        "dSYMs": false,
+        "idfa": false
       },
       "plugins": {
         "audio": {
@@ -119,18 +122,6 @@
           "text": "首页",
           "iconPath": "/static/tabbar/home.png",
           "selectedIconPath": "/static/tabbar/home_sel.png"
-        },
-        {
-          "pagePath": "pages/search/search",
-          "text": "搜索",
-          "iconPath": "/static/tabbar/search.png",
-          "selectedIconPath": "/static/tabbar/search_sel.png"
-        },
-        {
-          "pagePath": "pages/favorite/favorite",
-          "text": "收藏",
-          "iconPath": "/static/tabbar/collect.png",
-          "selectedIconPath": "/static/tabbar/collect_sel.png"
         },
         {
           "pagePath": "pages/mine/mine",

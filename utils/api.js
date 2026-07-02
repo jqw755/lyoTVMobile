@@ -1,7 +1,7 @@
 /**
  * 插件桥接 API 封装
  * 调用 uni 原生插件 Fongmi-VodPlugin
- * 插件未就绪时返回模拟数据供前端开发调试
+ * 不提供任何 mock 兜底：插件未就绪或调用失败一律 reject，确保前端只展示真实订阅数据
  */
 import { store } from '@/utils/appState.js'
 
@@ -28,13 +28,19 @@ function getPlugin() {
   return vodPlugin
 }
 
-/** 调用插件方法，返回 Promise（支持超时） */
+/**
+ * 调用插件方法，返回 Promise（支持超时）
+ * 插件未就绪、回调为空、code 非 0/200 一律 reject，绝不返回假数据
+ */
 function callPlugin(method, args = {}, timeout = 15000) {
   return new Promise((resolve, reject) => {
     const plugin = getPlugin()
     if (!plugin) {
-      resolve(getMockData(method, args))
-      return
+      // 不再兜底 mock，让上层以 toast 暴露"插件未就绪"
+      return reject(new Error('原生插件未注册，请使用自定义基座运行'))
+    }
+    if (typeof plugin[method] !== 'function') {
+      return reject(new Error(`插件未暴露方法: ${method}`))
     }
 
     // 保证 Promise 一定会 settle，避免回调抛错 / 不触发导致永久 loading
@@ -55,7 +61,6 @@ function callPlugin(method, args = {}, timeout = 15000) {
     try {
       plugin[method](args, (ret) => {
         console.log(`[插件] ${method} 回调触发`, JSON.stringify(ret))
-        // ret 可能为 null / 直接是数据对象 / {code,msg,data} 包装结构
         if (!ret) {
           console.error(`[插件] ${method} 返回空结果`)
           return finish(reject, new Error('插件返回空结果'))
@@ -104,6 +109,15 @@ export async function initApp() {
     console.log('[App] 步骤1/2 调用 init 加载订阅源...')
     const initRet = await callPlugin('init', { url: store.subUrl })
     console.log('[App] init 完成', JSON.stringify(initRet).substring(0, 200))
+    // 加载站点列表
+    try {
+      const siteData = await callPlugin('getSites')
+      const { updateSites } = await import('@/utils/appState.js')
+      updateSites(siteData)
+      console.log('[App] 站点列表已加载:', siteData?.length || 0)
+    } catch (e2) {
+      console.warn('[App] 获取站点列表失败:', e2 && e2.message)
+    }
     console.log('[App] 步骤2/2 调用 home 获取首页...')
     const homeData = await callPlugin('home')
     console.log('[App] home 完成, class=', homeData?.class?.length, 'list=', homeData?.list?.length)
@@ -116,74 +130,11 @@ export async function initApp() {
   }
 }
 
-// ===== 模拟数据（供前端开发调试用） =====
-
-function getMockData(method, args) {
-  switch (method) {
-    case 'init':
-      return { class: mockClasses, list: mockList }
-    case 'home':
-      return { class: mockClasses, list: mockList }
-    case 'category':
-      return { list: mockList }
-    case 'detail':
-      return {
-        vod: {
-          ...mockDetail,
-          flags: [
-            {
-              flag: 'ckm3u8',
-              episodes: [
-                { name: '第01集', url: 'https://example.com/playlist.m3u8' },
-                { name: '第02集', url: 'https://example.com/playlist2.m3u8' },
-                { name: '第03集', url: 'https://example.com/playlist3.m3u8' },
-                { name: '第04集', url: 'https://example.com/playlist4.m3u8' },
-              ],
-            },
-          ],
-        },
-      }
-    case 'search':
-      return { list: mockList.slice(0, 6) }
-    case 'player':
-      return { url: 'https://example.com/playlist.m3u8', parse: 0, header: {} }
-    default:
-      return {}
-  }
-}
-
-const mockClasses = [
-  { type_id: '1', type_name: '电影' },
-  { type_id: '2', type_name: '电视剧' },
-  { type_id: '3', type_name: '综艺' },
-  { type_id: '4', type_name: '动漫' },
-  { type_id: '5', type_name: '纪录片' },
-]
-
-const mockList = Array.from({ length: 20 }, (_, i) => ({
-  vod_id: `${i + 1}`,
-  vod_name: `影视标题 ${i + 1}`,
-  vod_pic: `https://picsum.photos/seed/vod${i}/300/400`,
-  vod_remarks: i % 3 === 0 ? '更新至128集' : i % 2 === 0 ? 'HD' : '第2026-06期',
-  vod_year: '2026',
-  vod_area: i % 2 === 0 ? '中国大陆' : '美国',
-  type_name: mockClasses[i % mockClasses.length].type_name,
-}))
-
-const mockDetail = {
-  vod_id: '1',
-  vod_name: '示例影视标题',
-  vod_pic: 'https://picsum.photos/seed/detail/400/600',
-  vod_remarks: '更新至128集',
-  vod_year: '2026',
-  vod_area: '中国大陆',
-  type_name: '电视剧',
-  vod_director: '李导',
-  vod_actor: '演员A、演员B、演员C',
-  vod_content: '这是一段影视简介，描述剧情内容。讲述了在某个时代背景下，主人公经历了一系列冒险与成长的故事。剧情跌宕起伏，引人入胜。',
-}
-
 // ===== 导出 API =====
+
+export function getSites() {
+  return callPlugin('getSites')
+}
 
 export function init(sites) {
   console.log('[API] init 传入订阅地址:', sites)
@@ -201,14 +152,19 @@ export function category(tid, page = 1, extend = {}) {
   return callPlugin('category', { tid, page, extend })
 }
 
-export function detail(id) {
-  return callPlugin('detail', { id })
+export function detail(id, siteKey) {
+  return callPlugin('detail', siteKey ? { id, key: siteKey } : { id })
 }
 
 export function search(keyword, page = 1) {
   return callPlugin('search', { keyword, page })
 }
 
-export function player(flag, id) {
-  return callPlugin('player', { flag, id })
+/** 搜索单个站点，结果含 site_name 字段方便前端分组 */
+export function searchSite(keyword, siteKey) {
+  return callPlugin('searchSite', { keyword, siteKey }, 8000)
+}
+
+export function player(flag, id, siteKey) {
+  return callPlugin('player', { flag, id, key: siteKey })
 }

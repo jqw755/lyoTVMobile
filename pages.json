@@ -67,6 +67,13 @@
           "animationType": "slide-in-bottom"
         }
       }
+    },
+    {
+      "path": "pages/settings/settings",
+      "style": {
+        "navigationBarTitleText": "设置",
+        "backgroundColorContent": "#141414"
+      }
     }
   ],
   "tabBar": {
@@ -80,18 +87,6 @@
         "text": "首页",
         "iconPath": "static/tabbar/home.png",
         "selectedIconPath": "static/tabbar/home_sel.png"
-      },
-      {
-        "pagePath": "pages/search/search",
-        "text": "搜索",
-        "iconPath": "static/tabbar/search.png",
-        "selectedIconPath": "static/tabbar/search_sel.png"
-      },
-      {
-        "pagePath": "pages/favorite/favorite",
-        "text": "收藏",
-        "iconPath": "static/tabbar/collect.png",
-        "selectedIconPath": "static/tabbar/collect_sel.png"
       },
       {
         "pagePath": "pages/mine/mine",

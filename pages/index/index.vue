@@ -1,5 +1,11 @@
 <template>
-  <view class="page">
+  <scroll-view class="page" scroll-y @scrolltolower="onLoadMore" lower-threshold="100">
+    <!-- 顶部搜索入口 -->
+    <view class="top-search" @tap="goSearch">
+      <uni-icons type="search" size="16" color="#888" />
+      <text class="top-search-text">搜影视、演员...</text>
+    </view>
+
     <!-- 分类导航（含"推荐"前置tab） -->
     <category-nav
       :list="tabList"
@@ -21,12 +27,19 @@
       </view>
     </view>
 
-    <!-- 加载更多 / 结尾 -->
+    <!-- 加载中 / 没有更多 -->
     <view v-if="list.length > 0" class="load-more">
-      <uni-icons type="more" size="14" color="#555" />
-      <text class="load-text"> 没有更多了</text>
+      <template v-if="loadingMore">
+        <uni-icons type="spinner-cycle" size="14" color="#888" />
+        <text class="load-text"> 加载中...</text>
+      </template>
+      <template v-else-if="noMore">
+        <view class="load-line" />
+        <text class="load-text">没有更多了</text>
+        <view class="load-line" />
+      </template>
     </view>
-  </view>
+  </scroll-view>
 </template>
 
 <script setup>
@@ -37,20 +50,26 @@ import { store, updateHome } from '@/utils/appState.js'
 import CategoryNav from '@/components/category-nav.vue'
 import VodCard from '@/components/vod-card.vue'
 
-/** 前置"推荐"tab（type_id 为空字符串表示首页推荐） */
 const RECOMMEND_TAB = { type_id: '', type_name: '推荐' }
 
 const classes = ref(store.classes)
 const list = ref(store.homeList)
 const activeTid = ref('')
 const page = ref(1)
+const loadingMore = ref(false)
+const noMore = ref(false)
 
-/** 图片尺寸设置：large=3列，medium=4列，small=5列 */
-const imageSize = ref('medium')
-try {
-  const saved = uni.getStorageSync('lyotv_image_size')
-  if (saved) imageSize.value = saved
-} catch {}
+const gridCols = ref('medium')
+function loadGridCols() {
+  try {
+    const saved = uni.getStorageSync('lyotv_grid_cols')
+    if (saved) gridCols.value = saved
+  } catch {}
+}
+loadGridCols()
+uni.$on('gridColsChanged', (val) => {
+  if (val) gridCols.value = val
+})
 
 const gridStyle = computed(() => {
   const config = {
@@ -58,30 +77,22 @@ const gridStyle = computed(() => {
     medium: { cols: 4, gap: '12rpx' },
     small: { cols: 5, gap: '10rpx' },
   }
-  const c = config[imageSize.value] || config.medium
-  return {
-    gridTemplateColumns: `repeat(${c.cols}, 1fr)`,
-    gap: c.gap,
-  }
+  const c = config[gridCols.value] || config.medium
+  return { gridTemplateColumns: `repeat(${c.cols}, 1fr)`, gap: c.gap }
 })
 
-/** 在原始分类前插入"推荐"tab */
 const tabList = computed(() => [RECOMMEND_TAB, ...classes.value])
 
-// 订阅状态变化时同步更新
 watch(() => store.classes, (v) => { classes.value = v }, { immediate: true })
 watch(() => store.homeList, (v) => {
-  // 只有当前在推荐tab时才更新显示
   if (activeTid.value === '') list.value = v
 }, { immediate: true })
 
 onMounted(async () => {
-  // 已有缓存数据则直接显示
   if (store.homeList.length > 0) {
     list.value = store.homeList
     return
   }
-  // 没有订阅源时不主动请求 home，避免插件空转返回空
   if (!store.subUrl) {
     uni.showToast({ title: '请先在"我的"设置订阅源', icon: 'none' })
     return
@@ -89,7 +100,6 @@ onMounted(async () => {
   await loadHome()
 })
 
-/** 订阅源已设置后，加载首页数据 */
 async function loadHome() {
   try {
     const data = await home()
@@ -97,13 +107,12 @@ async function loadHome() {
     list.value = data.list || []
     updateHome(data)
     activeTid.value = ''
+    noMore.value = true  // 推荐 tab 不分页
   } catch (e) {
-    console.error('[首页] 加载失败:', e && e.message, e)
     uni.showToast({ title: e?.message || '加载失败', icon: 'none' })
   }
 }
 
-// 个人中心设置订阅源成功后，通知首页重新加载
 uni.$on('subUpdated', () => {
   if (store.homeList.length === 0) loadHome()
 })
@@ -111,62 +120,81 @@ uni.$on('subUpdated', () => {
 async function onCategoryChange(item) {
   activeTid.value = item.type_id
   page.value = 1
+  noMore.value = false
+  loadingMore.value = false
 
-  // "推荐"tab → 显示首页列表（已缓存）
   if (item.type_id === '') {
     list.value = store.homeList
+    noMore.value = true
     return
   }
 
-  // 其他分类 → 调 API 获取
   try {
     const data = await category(item.type_id, 1)
     list.value = data.list || []
+    if ((data.list || []).length === 0) noMore.value = true
   } catch (e) {
     uni.showToast({ title: '加载失败', icon: 'none' })
   }
 }
 
+async function onLoadMore() {
+  if (loadingMore.value || noMore.value) return
+  // 推荐 tab 不分页
+  if (activeTid.value === '') return
+
+  loadingMore.value = true
+  try {
+    const nextPage = page.value + 1
+    const data = await category(activeTid.value, nextPage)
+    const newItems = data.list || []
+    if (newItems.length > 0) {
+      list.value = [...list.value, ...newItems]
+      page.value = nextPage
+    } else {
+      noMore.value = true
+    }
+  } catch (e) {
+    // 忽略加载更多失败
+  } finally {
+    loadingMore.value = false
+  }
+}
+
 function goDetail(item) {
   addHistory(item)
-  uni.navigateTo({ url: `/pages/detail/detail?id=${item.vod_id}` })
+  const name = item.vod_name || ''
+  uni.navigateTo({ url: '/pages/search/search?keyword=' + encodeURIComponent(name) })
 }
+
+function goSearch() {
+  uni.navigateTo({ url: '/pages/search/search' })
+}
+
+//#ifdef APP-PLUS
+uni.addInterceptor('navigateBack', {
+  fail() { /* ignore */ }
+})
+//#endif
 </script>
 
 <style lang="scss" scoped>
-.page {
-  min-height: 100vh;
-  padding-bottom: 12rpx;
-  background: var(--page-bg);
+.page { height: 100vh; padding-bottom: 12rpx; background: var(--bg-primary); }
+
+.top-search {
+  display: flex; align-items: center; gap: 10rpx;
+  margin: 12rpx 20rpx; padding: 16rpx 24rpx;
+  background: var(--card); border-radius: 40rpx;
+  .top-search-text { font-size: 26rpx; color: $theme-text-secondary; }
 }
 
-.section {
-  padding: 0 16rpx;
-}
-
-.grid {
-  display: grid;
-}
+.section { padding: 0 16rpx; }
+.grid { display: grid; }
 
 .load-more {
-  padding: 36rpx 0;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8rpx;
+  padding: 36rpx 0; text-align: center;
+  display: flex; align-items: center; justify-content: center; gap: 12rpx;
 }
-
-.load-more::before,
-.load-more::after {
-  content: '';
-  width: 60rpx;
-  height: 1rpx;
-  background: #333;
-}
-
-.load-text {
-  font-size: 22rpx;
-  color: #555;
-}
+.load-line { width: 60rpx; height: 1rpx; background: #555; }
+.load-text { font-size: 22rpx; color: #888; }
 </style>

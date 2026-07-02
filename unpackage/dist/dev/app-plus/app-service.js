@@ -797,7 +797,7 @@ if (uni.restoreGlobal) {
       /* CLASS, STYLE */
     );
   }
-  const __easycom_0$2 = /* @__PURE__ */ _export_sfc(_sfc_main$c, [["render", _sfc_render$c], ["__scopeId", "data-v-946bce22"], ["__file", "D:/jqw/project/lyoTVMobile/node_modules/@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue"]]);
+  const __easycom_0$2 = /* @__PURE__ */ _export_sfc(_sfc_main$c, [["render", _sfc_render$c], ["__scopeId", "data-v-946bce22"], ["__file", "E:/jqw/programs/lyoTVMobile/node_modules/@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue"]]);
   const scriptRel = "modulepreload";
   const assetsURL = function(dep) {
     return "/" + dep;
@@ -1166,7 +1166,7 @@ if (uni.restoreGlobal) {
       ])
     ]);
   }
-  const CategoryNav = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["render", _sfc_render$b], ["__scopeId", "data-v-c5e4a4a8"], ["__file", "D:/jqw/project/lyoTVMobile/components/category-nav.vue"]]);
+  const CategoryNav = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["render", _sfc_render$b], ["__scopeId", "data-v-c5e4a4a8"], ["__file", "E:/jqw/programs/lyoTVMobile/components/category-nav.vue"]]);
   const _sfc_main$a = {
     __name: "vod-card",
     props: {
@@ -1242,7 +1242,7 @@ if (uni.restoreGlobal) {
       ])
     ]);
   }
-  const VodCard = /* @__PURE__ */ _export_sfc(_sfc_main$a, [["render", _sfc_render$a], ["__scopeId", "data-v-da7b7900"], ["__file", "D:/jqw/project/lyoTVMobile/components/vod-card.vue"]]);
+  const VodCard = /* @__PURE__ */ _export_sfc(_sfc_main$a, [["render", _sfc_render$a], ["__scopeId", "data-v-da7b7900"], ["__file", "E:/jqw/programs/lyoTVMobile/components/vod-card.vue"]]);
   const _sfc_main$9 = {
     __name: "index",
     setup(__props, { expose: __expose }) {
@@ -1388,7 +1388,7 @@ if (uni.restoreGlobal) {
       ])) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["render", _sfc_render$9], ["__scopeId", "data-v-1cf27b2a"], ["__file", "D:/jqw/project/lyoTVMobile/pages/index/index.vue"]]);
+  const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["render", _sfc_render$9], ["__scopeId", "data-v-1cf27b2a"], ["__file", "E:/jqw/programs/lyoTVMobile/pages/index/index.vue"]]);
   const isObject = (val) => val !== null && typeof val === "object";
   const defaultDelimiters = ["{", "}"];
   class BaseFormatter {
@@ -1860,7 +1860,7 @@ if (uni.restoreGlobal) {
       )) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const __easycom_0$1 = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["render", _sfc_render$8], ["__scopeId", "data-v-2c1dd21f"], ["__file", "D:/jqw/project/lyoTVMobile/node_modules/@dcloudio/uni-ui/lib/uni-load-more/uni-load-more.vue"]]);
+  const __easycom_0$1 = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["render", _sfc_render$8], ["__scopeId", "data-v-2c1dd21f"], ["__file", "E:/jqw/programs/lyoTVMobile/node_modules/@dcloudio/uni-ui/lib/uni-load-more/uni-load-more.vue"]]);
   const _sfc_main$7 = {
     __name: "search",
     setup(__props, { expose: __expose }) {
@@ -2077,7 +2077,7 @@ if (uni.restoreGlobal) {
       ]))
     ]);
   }
-  const PagesSearchSearch = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render$7], ["__scopeId", "data-v-c10c040c"], ["__file", "D:/jqw/project/lyoTVMobile/pages/search/search.vue"]]);
+  const PagesSearchSearch = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render$7], ["__scopeId", "data-v-c10c040c"], ["__file", "E:/jqw/programs/lyoTVMobile/pages/search/search.vue"]]);
   function getDefaultExportFromCjs(x) {
     return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
   }
@@ -3217,7 +3217,7 @@ if (uni.restoreGlobal) {
       ])) : vue.createCommentVNode("v-if", true)
     ])) : vue.createCommentVNode("v-if", true);
   }
-  const PagesDetailDetail = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["render", _sfc_render$6], ["__scopeId", "data-v-eca06f3c"], ["__file", "D:/jqw/project/lyoTVMobile/pages/detail/detail.vue"]]);
+  const PagesDetailDetail = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["render", _sfc_render$6], ["__scopeId", "data-v-eca06f3c"], ["__file", "E:/jqw/programs/lyoTVMobile/pages/detail/detail.vue"]]);
   const _sfc_main$5 = {
     __name: "history",
     setup(__props, { expose: __expose }) {
@@ -3380,7 +3380,7 @@ if (uni.restoreGlobal) {
       ])) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const PagesHistoryHistory = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["render", _sfc_render$5], ["__scopeId", "data-v-b2d018fa"], ["__file", "D:/jqw/project/lyoTVMobile/pages/history/history.vue"]]);
+  const PagesHistoryHistory = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["render", _sfc_render$5], ["__scopeId", "data-v-b2d018fa"], ["__file", "E:/jqw/programs/lyoTVMobile/pages/history/history.vue"]]);
   const _sfc_main$4 = {
     __name: "favorite",
     setup(__props, { expose: __expose }) {
@@ -3466,7 +3466,7 @@ if (uni.restoreGlobal) {
       ]))
     ]);
   }
-  const PagesFavoriteFavorite = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["render", _sfc_render$4], ["__scopeId", "data-v-8850f19c"], ["__file", "D:/jqw/project/lyoTVMobile/pages/favorite/favorite.vue"]]);
+  const PagesFavoriteFavorite = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["render", _sfc_render$4], ["__scopeId", "data-v-8850f19c"], ["__file", "E:/jqw/programs/lyoTVMobile/pages/favorite/favorite.vue"]]);
   const _sfc_main$3 = {
     __name: "mine",
     setup(__props, { expose: __expose }) {
@@ -3824,7 +3824,7 @@ if (uni.restoreGlobal) {
       ])
     ]);
   }
-  const PagesMineMine = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["render", _sfc_render$3], ["__scopeId", "data-v-7c2ebfa5"], ["__file", "D:/jqw/project/lyoTVMobile/pages/mine/mine.vue"]]);
+  const PagesMineMine = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["render", _sfc_render$3], ["__scopeId", "data-v-7c2ebfa5"], ["__file", "E:/jqw/programs/lyoTVMobile/pages/mine/mine.vue"]]);
   const _sfc_main$2 = {
     __name: "player",
     setup(__props, { expose: __expose }) {
@@ -3913,7 +3913,7 @@ if (uni.restoreGlobal) {
       ])) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const PagesPlayerPlayer = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["render", _sfc_render$2], ["__file", "D:/jqw/project/lyoTVMobile/pages/player/player.vue"]]);
+  const PagesPlayerPlayer = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["render", _sfc_render$2], ["__file", "E:/jqw/programs/lyoTVMobile/pages/player/player.vue"]]);
   __definePage("pages/index/index", PagesIndexIndex);
   __definePage("pages/search/search", PagesSearchSearch);
   __definePage("pages/detail/detail", PagesDetailDetail);
@@ -4058,7 +4058,7 @@ if (uni.restoreGlobal) {
       vue.renderSlot(_ctx.$slots, "default")
     ]);
   }
-  const __easycom_0 = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render$1], ["__file", "D:/software/HBuilderX/plugins/uniapp-cli-vite/node_modules/@dcloudio/uni-components/lib/page-meta/page-meta.vue"]]);
+  const __easycom_0 = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render$1], ["__file", "F:/Program Files/HBuilderX/plugins/uniapp-cli-vite/node_modules/@dcloudio/uni-components/lib/page-meta/page-meta.vue"]]);
   const _sfc_main = {
     __name: "App",
     setup(__props, { expose: __expose }) {
@@ -4111,7 +4111,7 @@ if (uni.restoreGlobal) {
       /* CLASS */
     );
   }
-  const App = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "D:/jqw/project/lyoTVMobile/App.vue"]]);
+  const App = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "E:/jqw/programs/lyoTVMobile/App.vue"]]);
   function createApp() {
     const app = vue.createVueApp(App);
     return {
