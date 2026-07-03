@@ -26,7 +26,7 @@
 				</text>
 			</view>
 			<text v-if="store.subUrl && !subUrl" class="sub-hint">
-				当前订阅：{{ store.subUrl.substring(0, 40) }}...
+				当前订阅源：{{ store.subUrl }}
 			</text>
 		</view>
 
@@ -172,47 +172,47 @@
 	}
 
 	async function submitSub() {
-		const url = subUrl.value.trim()
-		if (!url) return
-		console.log('[订阅] 用户输入地址:', url)
-		try {
-			uni.showLoading({
-				title: '加载订阅...'
-			})
-			console.log('[订阅] 步骤1/2 init 加载订阅源...')
-			await apiInit(url)
-			console.log('[订阅] init 成功')
-			// 先存订阅地址，首页据此判断是否可请求 home
-			setSubUrl(url)
-			// 加载站点列表供搜索页使用
-			try {
-				const siteData = await getSites()
-				updateSites(siteData)
-				console.log('[订阅] 站点列表已加载:', siteData?.length || 0)
-			} catch (e2) {
-				console.warn('[订阅] 获取站点列表失败:', e2 && e2.message)
-			}
-			console.log('[订阅] 步骤2/2 home 获取首页...')
-			const data = await home()
-			console.log('[订阅] home 成功, class=', data?.class?.length, 'list=', data?.list?.length)
-			updateHome(data)
-			// 通知首页（若已打开）刷新数据
-			uni.$emit('subUpdated')
-			uni.hideLoading()
-			uni.showToast({
-				title: '订阅成功',
-				icon: 'success'
-			})
-			subUrl.value = ''
-		} catch (e) {
-			console.error('[订阅] 失败:', e && e.message, e)
-			uni.hideLoading()
-			uni.showToast({
-				title: e && e.message ? e.message : '订阅加载失败',
-				icon: 'none'
-			})
-		}
-	}
+	  const url = subUrl.value.trim()
+	  if (!url) return
+	  try {
+	   uni.showLoading({
+	    title: '加载订阅...'
+	   })
+	   await apiInit(url)
+	   // 先存订阅地址，首页据此判断是否可请求 home
+	   setSubUrl(url)
+	   // 加载站点列表供搜索页使用
+	   try {
+	    const siteData = await getSites()
+	    updateSites(siteData)
+	   } catch (e2) {
+	    // ignore
+	   }
+	   const data = await home()
+	   updateHome(data)
+	   // 通知首页（若已打开）刷新数据
+	   uni.$emit('subUpdated')
+	   uni.hideLoading()
+	   uni.showToast({
+	    title: '订阅成功',
+	    icon: 'success'
+	   })
+	   subUrl.value = ''
+	  } catch (e) {
+	   uni.hideLoading()
+	   const msg = e && e.message ? e.message : '订阅加载失败'
+	   // toast 只能显示少量字符，用 showModal 展示完整错误
+	   if (msg.length > 20) {
+	    uni.showModal({
+	     title: '订阅失败',
+	     content: msg,
+	     showCancel: false
+	    })
+	   } else {
+	    uni.showToast({ title: msg, icon: 'none' })
+	   }
+	  }
+	 }
 
 	function goPage(page) {
 		switch (page) {

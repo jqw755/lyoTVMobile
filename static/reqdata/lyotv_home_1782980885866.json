@@ -1,0 +1,1774 @@
+{
+  "filters": {
+    "hot_gaia": [
+      {
+        "key": "sort",
+        "name": "排序",
+        "value": [
+          {
+            "n": "热度",
+            "v": "recommend"
+          },
+          {
+            "n": "最新",
+            "v": "time"
+          },
+          {
+            "n": "评分",
+            "v": "rank"
+          }
+        ]
+      },
+      {
+        "key": "area",
+        "name": "地区",
+        "value": [
+          {
+            "n": "全部",
+            "v": "全部"
+          },
+          {
+            "n": "华语",
+            "v": "华语"
+          },
+          {
+            "n": "欧美",
+            "v": "欧美"
+          },
+          {
+            "n": "韩国",
+            "v": "韩国"
+          },
+          {
+            "n": "日本",
+            "v": "日本"
+          }
+        ]
+      }
+    ],
+    "tv_hot": [
+      {
+        "key": "type",
+        "name": "分类",
+        "value": [
+          {
+            "n": "综合",
+            "v": "tv_hot"
+          },
+          {
+            "n": "国产剧",
+            "v": "tv_domestic"
+          },
+          {
+            "n": "欧美剧",
+            "v": "tv_american"
+          },
+          {
+            "n": "日剧",
+            "v": "tv_japanese"
+          },
+          {
+            "n": "韩剧",
+            "v": "tv_korean"
+          },
+          {
+            "n": "动画",
+            "v": "tv_animation"
+          }
+        ]
+      }
+    ],
+    "show_hot": [
+      {
+        "key": "type",
+        "name": "分类",
+        "value": [
+          {
+            "n": "综合",
+            "v": "show_hot"
+          },
+          {
+            "n": "国内",
+            "v": "show_domestic"
+          },
+          {
+            "n": "国外",
+            "v": "show_foreign"
+          }
+        ]
+      }
+    ],
+    "movie": [
+      {
+        "key": "类型",
+        "name": "类型",
+        "value": [
+          {
+            "n": "全部类型",
+            "v": ""
+          },
+          {
+            "n": "喜剧",
+            "v": "喜剧"
+          },
+          {
+            "n": "爱情",
+            "v": "爱情"
+          },
+          {
+            "n": "动作",
+            "v": "动作"
+          },
+          {
+            "n": "科幻",
+            "v": "科幻"
+          },
+          {
+            "n": "动画",
+            "v": "动画"
+          },
+          {
+            "n": "悬疑",
+            "v": "悬疑"
+          },
+          {
+            "n": "犯罪",
+            "v": "犯罪"
+          },
+          {
+            "n": "惊悚",
+            "v": "惊悚"
+          },
+          {
+            "n": "冒险",
+            "v": "冒险"
+          },
+          {
+            "n": "音乐",
+            "v": "音乐"
+          },
+          {
+            "n": "历史",
+            "v": "历史"
+          },
+          {
+            "n": "奇幻",
+            "v": "奇幻"
+          },
+          {
+            "n": "恐怖",
+            "v": "恐怖"
+          },
+          {
+            "n": "战争",
+            "v": "战争"
+          },
+          {
+            "n": "传记",
+            "v": "传记"
+          },
+          {
+            "n": "歌舞",
+            "v": "歌舞"
+          },
+          {
+            "n": "武侠",
+            "v": "武侠"
+          },
+          {
+            "n": "灾难",
+            "v": "灾难"
+          },
+          {
+            "n": "西部",
+            "v": "西部"
+          },
+          {
+            "n": "纪录片",
+            "v": "纪录片"
+          },
+          {
+            "n": "短片",
+            "v": "短片"
+          }
+        ]
+      },
+      {
+        "key": "地区",
+        "name": "地区",
+        "value": [
+          {
+            "n": "全部地区",
+            "v": ""
+          },
+          {
+            "n": "华语",
+            "v": "华语"
+          },
+          {
+            "n": "欧美",
+            "v": "欧美"
+          },
+          {
+            "n": "韩国",
+            "v": "韩国"
+          },
+          {
+            "n": "日本",
+            "v": "日本"
+          },
+          {
+            "n": "中国大陆",
+            "v": "中国大陆"
+          },
+          {
+            "n": "美国",
+            "v": "美国"
+          },
+          {
+            "n": "中国香港",
+            "v": "中国香港"
+          },
+          {
+            "n": "中国台湾",
+            "v": "中国台湾"
+          },
+          {
+            "n": "英国",
+            "v": "英国"
+          },
+          {
+            "n": "法国",
+            "v": "法国"
+          },
+          {
+            "n": "德国",
+            "v": "德国"
+          },
+          {
+            "n": "意大利",
+            "v": "意大利"
+          },
+          {
+            "n": "西班牙",
+            "v": "西班牙"
+          },
+          {
+            "n": "印度",
+            "v": "印度"
+          },
+          {
+            "n": "泰国",
+            "v": "泰国"
+          },
+          {
+            "n": "俄罗斯",
+            "v": "俄罗斯"
+          },
+          {
+            "n": "加拿大",
+            "v": "加拿大"
+          },
+          {
+            "n": "澳大利亚",
+            "v": "澳大利亚"
+          },
+          {
+            "n": "爱尔兰",
+            "v": "爱尔兰"
+          },
+          {
+            "n": "瑞典",
+            "v": "瑞典"
+          },
+          {
+            "n": "巴西",
+            "v": "巴西"
+          },
+          {
+            "n": "丹麦",
+            "v": "丹麦"
+          }
+        ]
+      },
+      {
+        "key": "sort",
+        "name": "排序",
+        "value": [
+          {
+            "n": "近期热度",
+            "v": "T"
+          },
+          {
+            "n": "首映时间",
+            "v": "R"
+          },
+          {
+            "n": "高分优先",
+            "v": "S"
+          }
+        ]
+      },
+      {
+        "key": "年代",
+        "name": "年代",
+        "value": [
+          {
+            "n": "全部年代",
+            "v": ""
+          },
+          {
+            "n": "2026",
+            "v": "2026"
+          },
+          {
+            "n": "2025",
+            "v": "2025"
+          },
+          {
+            "n": "2024",
+            "v": "2024"
+          },
+          {
+            "n": "2023",
+            "v": "2023"
+          },
+          {
+            "n": "2022",
+            "v": "2022"
+          },
+          {
+            "n": "2021",
+            "v": "2021"
+          },
+          {
+            "n": "2020",
+            "v": "2020"
+          },
+          {
+            "n": "2019",
+            "v": "2019"
+          },
+          {
+            "n": "2010年代",
+            "v": "2010年代"
+          },
+          {
+            "n": "2000年代",
+            "v": "2000年代"
+          },
+          {
+            "n": "90年代",
+            "v": "90年代"
+          },
+          {
+            "n": "80年代",
+            "v": "80年代"
+          },
+          {
+            "n": "70年代",
+            "v": "70年代"
+          },
+          {
+            "n": "60年代",
+            "v": "60年代"
+          },
+          {
+            "n": "更早",
+            "v": "更早"
+          }
+        ]
+      }
+    ],
+    "tv": [
+      {
+        "key": "类型",
+        "name": "类型",
+        "value": [
+          {
+            "n": "不限",
+            "v": ""
+          },
+          {
+            "n": "电视剧",
+            "v": "电视剧"
+          },
+          {
+            "n": "综艺",
+            "v": "综艺"
+          }
+        ]
+      },
+      {
+        "key": "电视剧形式",
+        "name": "电视剧形式",
+        "value": [
+          {
+            "n": "不限",
+            "v": ""
+          },
+          {
+            "n": "喜剧",
+            "v": "喜剧"
+          },
+          {
+            "n": "爱情",
+            "v": "爱情"
+          },
+          {
+            "n": "悬疑",
+            "v": "悬疑"
+          },
+          {
+            "n": "动画",
+            "v": "动画"
+          },
+          {
+            "n": "武侠",
+            "v": "武侠"
+          },
+          {
+            "n": "古装",
+            "v": "古装"
+          },
+          {
+            "n": "家庭",
+            "v": "家庭"
+          },
+          {
+            "n": "犯罪",
+            "v": "犯罪"
+          },
+          {
+            "n": "科幻",
+            "v": "科幻"
+          },
+          {
+            "n": "恐怖",
+            "v": "恐怖"
+          },
+          {
+            "n": "历史",
+            "v": "历史"
+          },
+          {
+            "n": "战争",
+            "v": "战争"
+          },
+          {
+            "n": "动作",
+            "v": "动作"
+          },
+          {
+            "n": "冒险",
+            "v": "冒险"
+          },
+          {
+            "n": "传记",
+            "v": "传记"
+          },
+          {
+            "n": "剧情",
+            "v": "剧情"
+          },
+          {
+            "n": "奇幻",
+            "v": "奇幻"
+          },
+          {
+            "n": "惊悚",
+            "v": "惊悚"
+          },
+          {
+            "n": "灾难",
+            "v": "灾难"
+          },
+          {
+            "n": "歌舞",
+            "v": "歌舞"
+          },
+          {
+            "n": "音乐",
+            "v": "音乐"
+          }
+        ]
+      },
+      {
+        "key": "综艺形式",
+        "name": "综艺形式",
+        "value": [
+          {
+            "n": "不限",
+            "v": ""
+          },
+          {
+            "n": "真人秀",
+            "v": "真人秀"
+          },
+          {
+            "n": "脱口秀",
+            "v": "脱口秀"
+          },
+          {
+            "n": "音乐",
+            "v": "音乐"
+          },
+          {
+            "n": "歌舞",
+            "v": "歌舞"
+          }
+        ]
+      },
+      {
+        "key": "地区",
+        "name": "地区",
+        "value": [
+          {
+            "n": "全部地区",
+            "v": ""
+          },
+          {
+            "n": "华语",
+            "v": "华语"
+          },
+          {
+            "n": "欧美",
+            "v": "欧美"
+          },
+          {
+            "n": "国外",
+            "v": "国外"
+          },
+          {
+            "n": "韩国",
+            "v": "韩国"
+          },
+          {
+            "n": "日本",
+            "v": "日本"
+          },
+          {
+            "n": "中国大陆",
+            "v": "中国大陆"
+          },
+          {
+            "n": "中国香港",
+            "v": "中国香港"
+          },
+          {
+            "n": "美国",
+            "v": "美国"
+          },
+          {
+            "n": "英国",
+            "v": "英国"
+          },
+          {
+            "n": "泰国",
+            "v": "泰国"
+          },
+          {
+            "n": "中国台湾",
+            "v": "中国台湾"
+          },
+          {
+            "n": "意大利",
+            "v": "意大利"
+          },
+          {
+            "n": "法国",
+            "v": "法国"
+          },
+          {
+            "n": "德国",
+            "v": "德国"
+          },
+          {
+            "n": "西班牙",
+            "v": "西班牙"
+          },
+          {
+            "n": "俄罗斯",
+            "v": "俄罗斯"
+          },
+          {
+            "n": "瑞典",
+            "v": "瑞典"
+          },
+          {
+            "n": "巴西",
+            "v": "巴西"
+          },
+          {
+            "n": "丹麦",
+            "v": "丹麦"
+          },
+          {
+            "n": "印度",
+            "v": "印度"
+          },
+          {
+            "n": "加拿大",
+            "v": "加拿大"
+          },
+          {
+            "n": "爱尔兰",
+            "v": "爱尔兰"
+          },
+          {
+            "n": "澳大利亚",
+            "v": "澳大利亚"
+          }
+        ]
+      },
+      {
+        "key": "sort",
+        "name": "排序",
+        "value": [
+          {
+            "n": "近期热度",
+            "v": "T"
+          },
+          {
+            "n": "首播时间",
+            "v": "R"
+          },
+          {
+            "n": "高分优先",
+            "v": "S"
+          }
+        ]
+      },
+      {
+        "key": "年代",
+        "name": "年代",
+        "value": [
+          {
+            "n": "全部",
+            "v": ""
+          },
+          {
+            "n": "2026",
+            "v": "2026"
+          },
+          {
+            "n": "2025",
+            "v": "2025"
+          },
+          {
+            "n": "2024",
+            "v": "2024"
+          },
+          {
+            "n": "2023",
+            "v": "2023"
+          },
+          {
+            "n": "2022",
+            "v": "2022"
+          },
+          {
+            "n": "2021",
+            "v": "2021"
+          },
+          {
+            "n": "2020",
+            "v": "2020"
+          },
+          {
+            "n": "2019",
+            "v": "2019"
+          },
+          {
+            "n": "2010年代",
+            "v": "2010年代"
+          },
+          {
+            "n": "2000年代",
+            "v": "2000年代"
+          },
+          {
+            "n": "90年代",
+            "v": "90年代"
+          },
+          {
+            "n": "80年代",
+            "v": "80年代"
+          },
+          {
+            "n": "70年代",
+            "v": "70年代"
+          },
+          {
+            "n": "60年代",
+            "v": "60年代"
+          },
+          {
+            "n": "更早",
+            "v": "更早"
+          }
+        ]
+      },
+      {
+        "key": "平台",
+        "name": "平台",
+        "value": [
+          {
+            "n": "全部",
+            "v": ""
+          },
+          {
+            "n": "腾讯视频",
+            "v": "腾讯视频"
+          },
+          {
+            "n": "爱奇艺",
+            "v": "爱奇艺"
+          },
+          {
+            "n": "优酷",
+            "v": "优酷"
+          },
+          {
+            "n": "湖南卫视",
+            "v": "湖南卫视"
+          },
+          {
+            "n": "Netflix",
+            "v": "Netflix"
+          },
+          {
+            "n": "HBO",
+            "v": "HBO"
+          },
+          {
+            "n": "BBC",
+            "v": "BBC"
+          },
+          {
+            "n": "NHK",
+            "v": "NHK"
+          },
+          {
+            "n": "CBS",
+            "v": "CBS"
+          },
+          {
+            "n": "NBC",
+            "v": "NBC"
+          },
+          {
+            "n": "tvN",
+            "v": "tvN"
+          }
+        ]
+      }
+    ],
+    "rank_list_movie": [
+      {
+        "key": "榜单",
+        "name": "榜单",
+        "value": [
+          {
+            "n": "实时热门电影",
+            "v": "movie_real_time_hotest"
+          },
+          {
+            "n": "一周口碑电影榜",
+            "v": "movie_weekly_best"
+          },
+          {
+            "n": "豆瓣电影Top250",
+            "v": "movie_top250"
+          }
+        ]
+      }
+    ],
+    "rank_list_tv": [
+      {
+        "key": "榜单",
+        "name": "榜单",
+        "value": [
+          {
+            "n": "实时热门电视",
+            "v": "tv_real_time_hotest"
+          },
+          {
+            "n": "华语口碑剧集榜",
+            "v": "tv_chinese_best_weekly"
+          },
+          {
+            "n": "全球口碑剧集榜",
+            "v": "tv_global_best_weekly"
+          },
+          {
+            "n": "国内口碑综艺榜",
+            "v": "show_chinese_best_weekly"
+          },
+          {
+            "n": "国外口碑综艺榜",
+            "v": "show_global_best_weekly"
+          }
+        ]
+      }
+    ]
+  },
+  "list": [
+    {
+      "vod_name": "画梦录",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg1.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2931608818.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "0"
+    },
+    {
+      "vod_id": "-1001",
+      "vod_name": "臻彩",
+      "vod_pic": "https://img07.sogoucdn.com/v2/thumb/retype_exclude_gif/ext/auto/q/95/crop/xy/ai/t/0/?appid=122&url=https://img.xxooo.cf/portrait/webp/20260518_151236_1430.webp"
+    },
+    {
+      "vod_name": "南部档案",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg3.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2915779333.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "6.6"
+    },
+    {
+      "vod_name": "杀死比尔：血色全传",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933745954.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "8.7"
+    },
+    {
+      "vod_name": "四渡",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2931635664.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "0"
+    },
+    {
+      "vod_name": "爸爸",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg3.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933354037.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "7.6"
+    },
+    {
+      "vod_name": "痴迷",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2932963205.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "7.7"
+    },
+    {
+      "vod_name": "后室",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg3.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933327977.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "6.6"
+    },
+    {
+      "vod_name": "炽夏",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2926577405.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "4.8"
+    },
+    {
+      "vod_name": "爱情有烟火",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg3.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2930509432.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "0"
+    },
+    {
+      "vod_name": "莫离",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2932891615.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "6.3"
+    },
+    {
+      "vod_name": "魔方小姐",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933654136.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "0"
+    },
+    {
+      "vod_name": "抓特务",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933198755.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "7.4"
+    },
+    {
+      "vod_name": "画梦录 第二季",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg1.doubanio.com%2Ff%2Ffrodo%2F9585cef1614d973b58dfd90d84394397922c67bd%2Fpics%2Fsubject%2Ftv_normal.png&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "0"
+    },
+    {
+      "vod_name": "灿如繁星",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg2.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2929908271.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "0"
+    },
+    {
+      "vod_name": "入戏",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933648116.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "0"
+    },
+    {
+      "vod_name": "翘楚",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg3.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2932926393.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "4.9"
+    },
+    {
+      "vod_name": "地球超新鲜 第二季",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg1.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933553320.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "0"
+    },
+    {
+      "vod_name": "检察官室的提案",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg3.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933170913.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "8.7"
+    },
+    {
+      "vod_name": "问心2",
+      "vod_pic": "http://127.0.0.1:34043/img?url=https%3A%2F%2Fimg9.doubanio.com%2Fview%2Fphoto%2Fs_ratio_poster%2Fpublic%2Fp2933401946.jpg&referer=https%3A%2F%2Fapi.douban.com%2F&ua=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%29+AppleWebKit%2F537.36+%28KHTML%2C+like+Gecko%29+Chrome%2F110.0.0.0+Safari%2F537.36",
+      "vod_remarks": "7.6"
+    }
+  ],
+  "class": [
+    {
+      "filter": false,
+      "filters": [
+        {
+          "key": "sort",
+          "name": "排序",
+          "value": [
+            {
+              "n": "热度",
+              "v": "recommend"
+            },
+            {
+              "n": "最新",
+              "v": "time"
+            },
+            {
+              "n": "评分",
+              "v": "rank"
+            }
+          ]
+        },
+        {
+          "key": "area",
+          "name": "地区",
+          "value": [
+            {
+              "n": "全部",
+              "v": "全部"
+            },
+            {
+              "n": "华语",
+              "v": "华语"
+            },
+            {
+              "n": "欧美",
+              "v": "欧美"
+            },
+            {
+              "n": "韩国",
+              "v": "韩国"
+            },
+            {
+              "n": "日本",
+              "v": "日本"
+            }
+          ]
+        }
+      ],
+      "selected": false,
+      "type_id": "hot_gaia",
+      "type_name": "热播电影"
+    },
+    {
+      "filter": false,
+      "filters": [
+        {
+          "key": "type",
+          "name": "分类",
+          "value": [
+            {
+              "n": "综合",
+              "v": "tv_hot"
+            },
+            {
+              "n": "国产剧",
+              "v": "tv_domestic"
+            },
+            {
+              "n": "欧美剧",
+              "v": "tv_american"
+            },
+            {
+              "n": "日剧",
+              "v": "tv_japanese"
+            },
+            {
+              "n": "韩剧",
+              "v": "tv_korean"
+            },
+            {
+              "n": "动画",
+              "v": "tv_animation"
+            }
+          ]
+        }
+      ],
+      "selected": false,
+      "type_id": "tv_hot",
+      "type_name": "热播剧集"
+    },
+    {
+      "filter": false,
+      "filters": [
+        {
+          "key": "type",
+          "name": "分类",
+          "value": [
+            {
+              "n": "综合",
+              "v": "show_hot"
+            },
+            {
+              "n": "国内",
+              "v": "show_domestic"
+            },
+            {
+              "n": "国外",
+              "v": "show_foreign"
+            }
+          ]
+        }
+      ],
+      "selected": false,
+      "type_id": "show_hot",
+      "type_name": "热播综艺"
+    },
+    {
+      "filter": false,
+      "filters": [
+        {
+          "key": "类型",
+          "name": "类型",
+          "value": [
+            {
+              "n": "全部类型",
+              "v": ""
+            },
+            {
+              "n": "喜剧",
+              "v": "喜剧"
+            },
+            {
+              "n": "爱情",
+              "v": "爱情"
+            },
+            {
+              "n": "动作",
+              "v": "动作"
+            },
+            {
+              "n": "科幻",
+              "v": "科幻"
+            },
+            {
+              "n": "动画",
+              "v": "动画"
+            },
+            {
+              "n": "悬疑",
+              "v": "悬疑"
+            },
+            {
+              "n": "犯罪",
+              "v": "犯罪"
+            },
+            {
+              "n": "惊悚",
+              "v": "惊悚"
+            },
+            {
+              "n": "冒险",
+              "v": "冒险"
+            },
+            {
+              "n": "音乐",
+              "v": "音乐"
+            },
+            {
+              "n": "历史",
+              "v": "历史"
+            },
+            {
+              "n": "奇幻",
+              "v": "奇幻"
+            },
+            {
+              "n": "恐怖",
+              "v": "恐怖"
+            },
+            {
+              "n": "战争",
+              "v": "战争"
+            },
+            {
+              "n": "传记",
+              "v": "传记"
+            },
+            {
+              "n": "歌舞",
+              "v": "歌舞"
+            },
+            {
+              "n": "武侠",
+              "v": "武侠"
+            },
+            {
+              "n": "灾难",
+              "v": "灾难"
+            },
+            {
+              "n": "西部",
+              "v": "西部"
+            },
+            {
+              "n": "纪录片",
+              "v": "纪录片"
+            },
+            {
+              "n": "短片",
+              "v": "短片"
+            }
+          ]
+        },
+        {
+          "key": "地区",
+          "name": "地区",
+          "value": [
+            {
+              "n": "全部地区",
+              "v": ""
+            },
+            {
+              "n": "华语",
+              "v": "华语"
+            },
+            {
+              "n": "欧美",
+              "v": "欧美"
+            },
+            {
+              "n": "韩国",
+              "v": "韩国"
+            },
+            {
+              "n": "日本",
+              "v": "日本"
+            },
+            {
+              "n": "中国大陆",
+              "v": "中国大陆"
+            },
+            {
+              "n": "美国",
+              "v": "美国"
+            },
+            {
+              "n": "中国香港",
+              "v": "中国香港"
+            },
+            {
+              "n": "中国台湾",
+              "v": "中国台湾"
+            },
+            {
+              "n": "英国",
+              "v": "英国"
+            },
+            {
+              "n": "法国",
+              "v": "法国"
+            },
+            {
+              "n": "德国",
+              "v": "德国"
+            },
+            {
+              "n": "意大利",
+              "v": "意大利"
+            },
+            {
+              "n": "西班牙",
+              "v": "西班牙"
+            },
+            {
+              "n": "印度",
+              "v": "印度"
+            },
+            {
+              "n": "泰国",
+              "v": "泰国"
+            },
+            {
+              "n": "俄罗斯",
+              "v": "俄罗斯"
+            },
+            {
+              "n": "加拿大",
+              "v": "加拿大"
+            },
+            {
+              "n": "澳大利亚",
+              "v": "澳大利亚"
+            },
+            {
+              "n": "爱尔兰",
+              "v": "爱尔兰"
+            },
+            {
+              "n": "瑞典",
+              "v": "瑞典"
+            },
+            {
+              "n": "巴西",
+              "v": "巴西"
+            },
+            {
+              "n": "丹麦",
+              "v": "丹麦"
+            }
+          ]
+        },
+        {
+          "key": "sort",
+          "name": "排序",
+          "value": [
+            {
+              "n": "近期热度",
+              "v": "T"
+            },
+            {
+              "n": "首映时间",
+              "v": "R"
+            },
+            {
+              "n": "高分优先",
+              "v": "S"
+            }
+          ]
+        },
+        {
+          "key": "年代",
+          "name": "年代",
+          "value": [
+            {
+              "n": "全部年代",
+              "v": ""
+            },
+            {
+              "n": "2026",
+              "v": "2026"
+            },
+            {
+              "n": "2025",
+              "v": "2025"
+            },
+            {
+              "n": "2024",
+              "v": "2024"
+            },
+            {
+              "n": "2023",
+              "v": "2023"
+            },
+            {
+              "n": "2022",
+              "v": "2022"
+            },
+            {
+              "n": "2021",
+              "v": "2021"
+            },
+            {
+              "n": "2020",
+              "v": "2020"
+            },
+            {
+              "n": "2019",
+              "v": "2019"
+            },
+            {
+              "n": "2010年代",
+              "v": "2010年代"
+            },
+            {
+              "n": "2000年代",
+              "v": "2000年代"
+            },
+            {
+              "n": "90年代",
+              "v": "90年代"
+            },
+            {
+              "n": "80年代",
+              "v": "80年代"
+            },
+            {
+              "n": "70年代",
+              "v": "70年代"
+            },
+            {
+              "n": "60年代",
+              "v": "60年代"
+            },
+            {
+              "n": "更早",
+              "v": "更早"
+            }
+          ]
+        }
+      ],
+      "selected": false,
+      "type_id": "movie",
+      "type_name": "电影筛选"
+    },
+    {
+      "filter": false,
+      "filters": [
+        {
+          "key": "类型",
+          "name": "类型",
+          "value": [
+            {
+              "n": "不限",
+              "v": ""
+            },
+            {
+              "n": "电视剧",
+              "v": "电视剧"
+            },
+            {
+              "n": "综艺",
+              "v": "综艺"
+            }
+          ]
+        },
+        {
+          "key": "电视剧形式",
+          "name": "电视剧形式",
+          "value": [
+            {
+              "n": "不限",
+              "v": ""
+            },
+            {
+              "n": "喜剧",
+              "v": "喜剧"
+            },
+            {
+              "n": "爱情",
+              "v": "爱情"
+            },
+            {
+              "n": "悬疑",
+              "v": "悬疑"
+            },
+            {
+              "n": "动画",
+              "v": "动画"
+            },
+            {
+              "n": "武侠",
+              "v": "武侠"
+            },
+            {
+              "n": "古装",
+              "v": "古装"
+            },
+            {
+              "n": "家庭",
+              "v": "家庭"
+            },
+            {
+              "n": "犯罪",
+              "v": "犯罪"
+            },
+            {
+              "n": "科幻",
+              "v": "科幻"
+            },
+            {
+              "n": "恐怖",
+              "v": "恐怖"
+            },
+            {
+              "n": "历史",
+              "v": "历史"
+            },
+            {
+              "n": "战争",
+              "v": "战争"
+            },
+            {
+              "n": "动作",
+              "v": "动作"
+            },
+            {
+              "n": "冒险",
+              "v": "冒险"
+            },
+            {
+              "n": "传记",
+              "v": "传记"
+            },
+            {
+              "n": "剧情",
+              "v": "剧情"
+            },
+            {
+              "n": "奇幻",
+              "v": "奇幻"
+            },
+            {
+              "n": "惊悚",
+              "v": "惊悚"
+            },
+            {
+              "n": "灾难",
+              "v": "灾难"
+            },
+            {
+              "n": "歌舞",
+              "v": "歌舞"
+            },
+            {
+              "n": "音乐",
+              "v": "音乐"
+            }
+          ]
+        },
+        {
+          "key": "综艺形式",
+          "name": "综艺形式",
+          "value": [
+            {
+              "n": "不限",
+              "v": ""
+            },
+            {
+              "n": "真人秀",
+              "v": "真人秀"
+            },
+            {
+              "n": "脱口秀",
+              "v": "脱口秀"
+            },
+            {
+              "n": "音乐",
+              "v": "音乐"
+            },
+            {
+              "n": "歌舞",
+              "v": "歌舞"
+            }
+          ]
+        },
+        {
+          "key": "地区",
+          "name": "地区",
+          "value": [
+            {
+              "n": "全部地区",
+              "v": ""
+            },
+            {
+              "n": "华语",
+              "v": "华语"
+            },
+            {
+              "n": "欧美",
+              "v": "欧美"
+            },
+            {
+              "n": "国外",
+              "v": "国外"
+            },
+            {
+              "n": "韩国",
+              "v": "韩国"
+            },
+            {
+              "n": "日本",
+              "v": "日本"
+            },
+            {
+              "n": "中国大陆",
+              "v": "中国大陆"
+            },
+            {
+              "n": "中国香港",
+              "v": "中国香港"
+            },
+            {
+              "n": "美国",
+              "v": "美国"
+            },
+            {
+              "n": "英国",
+              "v": "英国"
+            },
+            {
+              "n": "泰国",
+              "v": "泰国"
+            },
+            {
+              "n": "中国台湾",
+              "v": "中国台湾"
+            },
+            {
+              "n": "意大利",
+              "v": "意大利"
+            },
+            {
+              "n": "法国",
+              "v": "法国"
+            },
+            {
+              "n": "德国",
+              "v": "德国"
+            },
+            {
+              "n": "西班牙",
+              "v": "西班牙"
+            },
+            {
+              "n": "俄罗斯",
+              "v": "俄罗斯"
+            },
+            {
+              "n": "瑞典",
+              "v": "瑞典"
+            },
+            {
+              "n": "巴西",
+              "v": "巴西"
+            },
+            {
+              "n": "丹麦",
+              "v": "丹麦"
+            },
+            {
+              "n": "印度",
+              "v": "印度"
+            },
+            {
+              "n": "加拿大",
+              "v": "加拿大"
+            },
+            {
+              "n": "爱尔兰",
+              "v": "爱尔兰"
+            },
+            {
+              "n": "澳大利亚",
+              "v": "澳大利亚"
+            }
+          ]
+        },
+        {
+          "key": "sort",
+          "name": "排序",
+          "value": [
+            {
+              "n": "近期热度",
+              "v": "T"
+            },
+            {
+              "n": "首播时间",
+              "v": "R"
+            },
+            {
+              "n": "高分优先",
+              "v": "S"
+            }
+          ]
+        },
+        {
+          "key": "年代",
+          "name": "年代",
+          "value": [
+            {
+              "n": "全部",
+              "v": ""
+            },
+            {
+              "n": "2026",
+              "v": "2026"
+            },
+            {
+              "n": "2025",
+              "v": "2025"
+            },
+            {
+              "n": "2024",
+              "v": "2024"
+            },
+            {
+              "n": "2023",
+              "v": "2023"
+            },
+            {
+              "n": "2022",
+              "v": "2022"
+            },
+            {
+              "n": "2021",
+              "v": "2021"
+            },
+            {
+              "n": "2020",
+              "v": "2020"
+            },
+            {
+              "n": "2019",
+              "v": "2019"
+            },
+            {
+              "n": "2010年代",
+              "v": "2010年代"
+            },
+            {
+              "n": "2000年代",
+              "v": "2000年代"
+            },
+            {
+              "n": "90年代",
+              "v": "90年代"
+            },
+            {
+              "n": "80年代",
+              "v": "80年代"
+            },
+            {
+              "n": "70年代",
+              "v": "70年代"
+            },
+            {
+              "n": "60年代",
+              "v": "60年代"
+            },
+            {
+              "n": "更早",
+              "v": "更早"
+            }
+          ]
+        },
+        {
+          "key": "平台",
+          "name": "平台",
+          "value": [
+            {
+              "n": "全部",
+              "v": ""
+            },
+            {
+              "n": "腾讯视频",
+              "v": "腾讯视频"
+            },
+            {
+              "n": "爱奇艺",
+              "v": "爱奇艺"
+            },
+            {
+              "n": "优酷",
+              "v": "优酷"
+            },
+            {
+              "n": "湖南卫视",
+              "v": "湖南卫视"
+            },
+            {
+              "n": "Netflix",
+              "v": "Netflix"
+            },
+            {
+              "n": "HBO",
+              "v": "HBO"
+            },
+            {
+              "n": "BBC",
+              "v": "BBC"
+            },
+            {
+              "n": "NHK",
+              "v": "NHK"
+            },
+            {
+              "n": "CBS",
+              "v": "CBS"
+            },
+            {
+              "n": "NBC",
+              "v": "NBC"
+            },
+            {
+              "n": "tvN",
+              "v": "tvN"
+            }
+          ]
+        }
+      ],
+      "selected": false,
+      "type_id": "tv",
+      "type_name": "电视筛选"
+    },
+    {
+      "filter": false,
+      "filters": [
+        {
+          "key": "榜单",
+          "name": "榜单",
+          "value": [
+            {
+              "n": "实时热门电影",
+              "v": "movie_real_time_hotest"
+            },
+            {
+              "n": "一周口碑电影榜",
+              "v": "movie_weekly_best"
+            },
+            {
+              "n": "豆瓣电影Top250",
+              "v": "movie_top250"
+            }
+          ]
+        }
+      ],
+      "selected": false,
+      "type_id": "rank_list_movie",
+      "type_name": "电影榜单"
+    },
+    {
+      "filter": false,
+      "filters": [
+        {
+          "key": "榜单",
+          "name": "榜单",
+          "value": [
+            {
+              "n": "实时热门电视",
+              "v": "tv_real_time_hotest"
+            },
+            {
+              "n": "华语口碑剧集榜",
+              "v": "tv_chinese_best_weekly"
+            },
+            {
+              "n": "全球口碑剧集榜",
+              "v": "tv_global_best_weekly"
+            },
+            {
+              "n": "国内口碑综艺榜",
+              "v": "show_chinese_best_weekly"
+            },
+            {
+              "n": "国外口碑综艺榜",
+              "v": "show_global_best_weekly"
+            }
+          ]
+        }
+      ],
+      "selected": false,
+      "type_id": "rank_list_tv",
+      "type_name": "电视剧榜单"
+    }
+  ]
+}

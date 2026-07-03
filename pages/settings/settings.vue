@@ -26,11 +26,27 @@
         <switch :checked="muted" @change="onMutedChange" color="#e74c3c" />
       </view>
     </view>
+
+    <!-- 调试：导出 API 数据 -->
+    <view class="section">
+      <view class="section-header">
+        <uni-icons type="download" size="16" color="#888" />
+        <text class="section-title"> 数据调试</text>
+      </view>
+      <view class="setting-item">
+        <text class="export-hint">导出插件返回的原始 JSON，对照完善页面字段</text>
+      </view>
+      <view class="export-actions">
+        <text class="export-btn" @tap="exportApiData('sites')">导出站点数据</text>
+        <text class="export-btn" @tap="exportApiData('home')">导出首页数据</text>
+        <text class="export-btn" @tap="exportApiData('detail')">导出详情数据</text>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted } from 'vue'
 import { getSetting, setSetting } from '@/utils/store.js'
 
 const SETTING_KEY = 'video_muted'
@@ -45,7 +61,6 @@ function onMutedChange(e) {
   const val = e.detail.value
   muted.value = val
   setSetting(SETTING_KEY, val)
-  // 通知其他已打开的页面
   uni.$emit('mutedChanged', val)
 }
 
@@ -63,6 +78,46 @@ function showMuteHelp() {
     content: '为了增强用户体验，所有视频默认静音播放。手动关闭后，后续视频播放会自动播放声音，请控制合理的媒体音量。',
     showCancel: false,
   })
+}
+
+/** 导出指定 API 的原始响应数据 */
+function exportApiData(method) {
+  const snapKey = '__apiSnapshots'
+  const allData = uni[snapKey] || {}
+  const data = allData[method]
+  if (!data) {
+    uni.showToast({ title: '暂无 ' + method + ' 数据，请先访问对应页面', icon: 'none' })
+    return
+  }
+  const json = JSON.stringify(data, null, 2)
+  // 使用 plus 的 file API 写入文件（Android 真机可用）
+  // 降级方案：复制到剪贴板
+  try {
+    const fileName = 'lyotv_' + method + '_' + Date.now() + '.json'
+    const fullPath = 'file:///storage/emulated/0/Download/' + fileName
+    if (typeof plus !== 'undefined') {
+      // Android: 写入公共下载目录
+      plus.io.requestFileSystem(plus.io.PUBLIC_DOWNLOADS, (fs) => {
+        fs.root.getFile(fileName, { create: true }, (fileEntry) => {
+          fileEntry.createWriter((writer) => {
+            writer.onwrite = () => {
+              uni.showToast({ title: '已导出到 Download/' + fileName, icon: 'success', duration: 3000 })
+            }
+            writer.onerror = () => {
+              uni.setClipboardData({ data: json, success: () => uni.showToast({ title: '已复制到剪贴板', icon: 'success' }) })
+            }
+            writer.write(json)
+          })
+        }, () => {
+          uni.setClipboardData({ data: json, success: () => uni.showToast({ title: '已复制到剪贴板', icon: 'success' }) })
+        })
+      })
+    } else {
+      uni.setClipboardData({ data: json, success: () => uni.showToast({ title: '已复制到剪贴板', icon: 'success' }) })
+    }
+  } catch (e) {
+    uni.setClipboardData({ data: json, success: () => uni.showToast({ title: '已复制到剪贴板', icon: 'success' }) })
+  }
 }
 </script>
 
@@ -141,6 +196,32 @@ function showMuteHelp() {
   text {
     font-size: 26rpx;
     color: $theme-text;
+  }
+}
+
+/* 导出调试区 */
+.export-hint {
+  font-size: 24rpx;
+  color: $theme-text-secondary;
+  line-height: 1.5;
+}
+
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding-top: 16rpx;
+}
+
+.export-btn {
+  font-size: 24rpx;
+  color: $theme-accent;
+  background: rgba($theme-accent, 0.1);
+  padding: 10rpx 24rpx;
+  border-radius: 30rpx;
+
+  &:active {
+    opacity: 0.6;
   }
 }
 </style>

@@ -93,10 +93,7 @@ onMounted(async () => {
     list.value = store.homeList
     return
   }
-  if (!store.subUrl) {
-    uni.showToast({ title: '请先在"我的"设置订阅源', icon: 'none' })
-    return
-  }
+  if (!store.subUrl) return
   await loadHome()
 })
 

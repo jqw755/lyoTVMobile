@@ -1,110 +1,97 @@
 {
-  "name": "lyoTV Mobile",
-  "appid": "_UNI_8112C78",
-  "versionName": "1.0.0",
-  "versionCode": "100",
-  "description": "乐意欧TV",
-  "launch_path": "__uniapptabbar",
-  "easycom": {
-    "autoscan": true,
-    "custom": {
-      "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
-    }
-  },
-  "pages": [
-    {
-      "path": "pages/index/index",
-      "style": {
-        "navigationBarTitleText": "lyoTV",
-        "enablePullDownRefresh": true,
-        "backgroundColorContent": "#141414"
-      }
-    },
-    {
-      "path": "pages/search/search",
-      "style": {
-        "navigationBarTitleText": "搜索",
-        "backgroundColorContent": "#141414"
-      }
-    },
-    {
-      "path": "pages/detail/detail",
-      "style": {
-        "navigationBarTitleText": "详情",
-        "backgroundColorContent": "#141414"
-      }
-    },
-    {
-      "path": "pages/history/history",
-      "style": {
-        "navigationBarTitleText": "观看历史",
-        "backgroundColorContent": "#141414",
-        "enablePullDownRefresh": true
-      }
-    },
-    {
-      "path": "pages/favorite/favorite",
-      "style": {
-        "navigationBarTitleText": "我的收藏",
-        "backgroundColorContent": "#141414",
-        "enablePullDownRefresh": true
-      }
-    },
-    {
-      "path": "pages/mine/mine",
-      "style": {
-        "navigationBarTitleText": "个人中心",
-        "backgroundColorContent": "#141414"
-      }
-    },
-    {
-      "path": "pages/player/player",
-      "style": {
-        "navigationBarTitleText": "",
-        "backgroundColorContent": "#000",
-        "app-plus": {
-          "fullscreen": true,
-          "animationType": "slide-in-bottom"
-        }
-      }
-    },
-    {
-      "path": "pages/settings/settings",
-      "style": {
-        "navigationBarTitleText": "设置",
-        "backgroundColorContent": "#141414"
-      }
-    }
-  ],
-  "tabBar": {
-    "color": "#888888",
-    "selectedColor": "#e74c3c",
-    "backgroundColor": "#1a1a1a",
-    "borderStyle": "black",
-    "list": [
-      {
-        "pagePath": "pages/index/index",
-        "text": "首页",
-        "iconPath": "static/tabbar/home.png",
-        "selectedIconPath": "static/tabbar/home_sel.png"
-      },
-      {
-        "pagePath": "pages/mine/mine",
-        "text": "我的",
-        "iconPath": "static/tabbar/mine.png",
-        "selectedIconPath": "static/tabbar/mine_sel.png"
-      }
-    ]
-  },
-  "globalStyle": {
-    "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "lyoTV",
-    "navigationBarBackgroundColor": "#1a1a1a",
-    "backgroundColor": "#141414",
-    "backgroundColorContent": "#141414"
-  },
-  "condition": {
-    "current": 0,
-    "list": []
-  }
+	"name": "lyoTVMobile",
+	"appid": "_UNI_8112C78",
+	"versionName": "1.0.0",
+	"versionCode": "100",
+	"description": "乐意欧TV",
+	"launch_path": "__uniapptabbar",
+	"easycom": {
+		"autoscan": true,
+		"custom": {
+			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+		}
+	},
+	"pages": [{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "lyoTV",
+				"enablePullDownRefresh": true,
+				"backgroundColorContent": "#141414"
+			}
+		},
+		{
+			"path": "pages/search/search",
+			"style": {
+				"navigationBarTitleText": "搜索",
+				"backgroundColorContent": "#141414"
+			}
+		},
+		{
+			"path": "pages/detail/detail",
+			"style": {
+				"navigationBarTitleText": "详情",
+				"backgroundColorContent": "#141414"
+			}
+		},
+		{
+			"path": "pages/history/history",
+			"style": {
+				"navigationBarTitleText": "观看历史",
+				"backgroundColorContent": "#141414",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/favorite/favorite",
+			"style": {
+				"navigationBarTitleText": "我的收藏",
+				"backgroundColorContent": "#141414",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/mine/mine",
+			"style": {
+				"navigationBarTitleText": "个人中心",
+				"backgroundColorContent": "#141414"
+			}
+		},
+		{
+			"path": "pages/settings/settings",
+			"style": {
+				"navigationBarTitleText": "设置",
+				"backgroundColorContent": "#141414"
+			}
+		}
+	],
+	"tabBar": {
+		"color": "#888888",
+		"selectedColor": "#e74c3c",
+		"backgroundColor": "#1a1a1a",
+		"borderStyle": "black",
+		"list": [{
+				"pagePath": "pages/index/index",
+				"text": "首页",
+				"iconPath": "static/tabbar/home.png",
+				"selectedIconPath": "static/tabbar/home_sel.png"
+			},
+			{
+				"pagePath": "pages/mine/mine",
+				"text": "我的",
+				"iconPath": "static/tabbar/mine.png",
+				"selectedIconPath": "static/tabbar/mine_sel.png"
+			}
+		]
+	},
+	"globalStyle": {
+		"navigationBarTextStyle": "white",
+		"navigationBarTitleText": "lyoTV",
+		"navigationBarBackgroundColor": "#1a1a1a",
+		"backgroundColor": "#141414",
+		"backgroundColorContent": "#141414"
+	},
+	"condition": {
+		"current": 0,
+		"list": []
+	}
 }

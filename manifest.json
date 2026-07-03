@@ -1,9 +1,9 @@
 {
 	"name": "lyoTV",
 	"appid": "__UNI__8112C78",
-	"description": "乐意欧影视",
-	"versionName": "1.0.5",
-	"versionCode": 105,
+	"description": "乐意欧TV",
+	"versionName": "1.0.6",
+	"versionCode": 106,
 	"transformPx": false,
 	"app-plus": {
 		"usingComponents": true,
@@ -25,6 +25,9 @@
 			"ios": {
 				"dSYMs": false,
 				"idfa": false
+			},
+			"splashscreen": {
+				"androidStyle": "common"
 			}
 		},
 		"nativePlugins": {
@@ -44,7 +47,6 @@
 			}
 		},
 		"modules": {
-			"LivePusher": {},
 			"VideoPlayer": {}
 		}
 	},

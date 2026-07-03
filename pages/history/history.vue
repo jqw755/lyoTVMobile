@@ -126,22 +126,30 @@ function pad(n) {
 }
 
 .list {
-  padding: 0 20rpx;
+  padding: 12rpx 16rpx;
 }
 
 .item {
   display: flex;
   gap: 16rpx;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid $theme-border;
+  padding: 16rpx 12rpx;
+  background: var(--card);
+  border-radius: 12rpx;
+  margin-bottom: 12rpx;
   align-items: center;
+  box-shadow: 0 1rpx 6rpx rgba(0,0,0,0.04);
+  transition: transform 0.15s;
+
+  &:active {
+    transform: scale(0.98);
+  }
 
   .thumb {
-    width: 140rpx;
-    height: 190rpx;
+    width: 120rpx;
+    height: 160rpx;
     border-radius: 8rpx;
     flex-shrink: 0;
-    background: $theme-card-hover;
+    background: var(--card-hover);
   }
 
   .info {
@@ -149,6 +157,7 @@ function pad(n) {
     display: flex;
     flex-direction: column;
     gap: 6rpx;
+    min-width: 0;
   }
 
   .title {
@@ -159,12 +168,12 @@ function pad(n) {
 
   .episode {
     font-size: 24rpx;
-    color: $theme-accent;
+    color: var(--accent);
   }
 
   .time {
     font-size: 22rpx;
-    color: #555;
+    color: $theme-text-secondary;
   }
 
   .close {
@@ -183,7 +192,7 @@ function pad(n) {
   font-size: 26rpx;
   color: $theme-text-secondary;
   padding: 16rpx 48rpx;
-  border: 1rpx solid $theme-border;
+  border: 1rpx solid var(--border);
   border-radius: 40rpx;
 }
 </style>

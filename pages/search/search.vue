@@ -187,54 +187,51 @@
 </script>
 
 <style lang="scss" scoped>
-	.page { height: 100vh; display: flex; flex-direction: column; background: var(--bg-primary); }
-	.search-bar { padding: 12rpx 20rpx; background: var(--bg-primary); flex-shrink: 0; }
-	.search-input { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 40rpx; padding: 12rpx 20rpx;
-		input { flex: 1; font-size: 28rpx; color: #000; }
-		.placeholder { color: $theme-text-secondary; font-size: 28rpx; }
-		.clear { color: $theme-text-secondary; font-size: 28rpx; padding: 0 8rpx; }
-		.search-btn { color: #fff; background: $theme-accent; font-size: 26rpx; padding: 8rpx 24rpx; border-radius: 30rpx; flex-shrink: 0; }
-	}
-	.section { padding: 0 20rpx; margin-top: 16rpx;
-		&-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rpx; }
-		&-title { font-size: 28rpx; font-weight: 600; color: $theme-text; }
-		.clear-btn { font-size: 24rpx; color: $theme-text-secondary; }
-	}
-	.tags { display: flex; flex-wrap: wrap; gap: 12rpx;
-		.tag { background: var(--card); color: var(--text-secondary); font-size: 24rpx; padding: 10rpx 24rpx; border-radius: 30rpx; }
-	}
-	.empty-hint { text-align: center; padding: 80rpx 0; color: $theme-text-secondary; font-size: 28rpx; }
+ .page { height: 100vh; display: flex; flex-direction: column; background: var(--bg-primary); }
+ .search-bar { padding: 12rpx 20rpx; background: var(--bg-primary); flex-shrink: 0; }
+ .search-input { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 40rpx; padding: 12rpx 20rpx;
+  input { flex: 1; font-size: 28rpx; color: $theme-text; }
+  .placeholder { color: $theme-text-secondary; font-size: 28rpx; }
+  .clear { color: $theme-text-secondary; font-size: 28rpx; padding: 0 8rpx; }
+  .search-btn { color: #fff; background: var(--accent); font-size: 26rpx; padding: 8rpx 24rpx; border-radius: 30rpx; flex-shrink: 0; }
+ }
+ .section { padding: 0 20rpx; margin-top: 16rpx;
+  &-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rpx; }
+  &-title { font-size: 28rpx; font-weight: 600; color: $theme-text; }
+  .clear-btn { font-size: 24rpx; color: $theme-text-secondary; }
+ }
+ .tags { display: flex; flex-wrap: wrap; gap: 12rpx;
+  .tag { background: var(--card); color: var(--text-secondary); font-size: 24rpx; padding: 10rpx 24rpx; border-radius: 30rpx; }
+ }
+ .empty-hint { text-align: center; padding: 80rpx 0; color: $theme-text-secondary; font-size: 28rpx; }
 
-	.split { flex: 1; display: flex; overflow: hidden; }
+ .split { flex: 1; display: flex; overflow: hidden; }
 
-	/* 左侧站点列表（竖向） */
-	.left { width: 200rpx; background: var(--card); flex-shrink: 0;
-		.site-item { display: flex; align-items: center; justify-content: space-between; padding: 18rpx 14rpx; border-bottom: 1rpx solid $theme-border;
-			&.active { background: $theme-accent; .site-name { color: #fff; } .site-num { color: rgba(255,255,255,0.8); } }
-			&:first-child { border-top: none; }
-		}
-		.site-name { font-size: 24rpx; color: $theme-text; flex: 1; }
-		.site-num { font-size: 20rpx; color: $theme-text-secondary; background: rgba(0,0,0,0.06); padding: 2rpx 12rpx; border-radius: 20rpx; }
-		.site-loading { font-size: 24rpx; color: $theme-accent; animation: pulse 1s infinite; }
-	}
-	@keyframes pulse { 0%,100% { opacity: 0.3 } 50% { opacity: 1 } }
+ .left { width: 200rpx; background: var(--card); flex-shrink: 0;
+  .site-item { display: flex; align-items: center; justify-content: space-between; padding: 18rpx 14rpx; border-bottom: 1rpx solid var(--border);
+   &.active { background: var(--accent); .site-name { color: #fff; } .site-num { color: rgba(255,255,255,0.8); } }
+  }
+  .site-name { font-size: 24rpx; color: $theme-text; flex: 1; }
+  .site-num { font-size: 20rpx; color: $theme-text-secondary; background: rgba(0,0,0,0.06); padding: 2rpx 12rpx; border-radius: 20rpx; }
+  .site-loading { font-size: 24rpx; color: var(--accent); animation: pulse 1s infinite; }
+ }
+ @keyframes pulse { 0%,100% { opacity: 0.3 } 50% { opacity: 1 } }
 
-	.right { flex: 1; padding: 0 16rpx;
-		.right-header { display: flex; align-items: center; justify-content: space-between; padding: 16rpx 0 8rpx; position: sticky; top: 0; background: var(--bg-primary); z-index: 2; }
-		.right-title { font-size: 28rpx; font-weight: 600; color: $theme-text; }
-		.right-count { font-size: 22rpx; color: $theme-text-secondary; }
-	}
+ .right { flex: 1; padding: 0 16rpx;
+  .right-header { display: flex; align-items: center; justify-content: space-between; padding: 16rpx 0 8rpx; position: sticky; top: 0; background: var(--bg-primary); z-index: 2; }
+  .right-title { font-size: 28rpx; font-weight: 600; color: $theme-text; }
+  .right-count { font-size: 22rpx; color: $theme-text-secondary; }
+ }
 
-	/* 单列瀑布流 */
-	.list { display: flex; flex-direction: column; gap: 16rpx; padding-bottom: 20rpx;
-		.list-item { display: flex; gap: 16rpx; border-radius: 8rpx; overflow: hidden; background: $theme-card; padding: 16rpx;
-			&:active { opacity: 0.7; }
-			.thumb { width: 140rpx; height: 190rpx; flex-shrink: 0; border-radius: 8rpx; display: block; background: $theme-card-hover; }
-			.info { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-			.title { font-size: 28rpx; font-weight: 600; color: $theme-text; display: block; line-height: 1.3; margin-bottom: 6rpx; }
-			.remark { display: inline-block; font-size: 22rpx; color: $theme-accent; background: rgba($theme-accent, 0.1); padding: 2rpx 12rpx; border-radius: 4rpx; align-self: flex-start; }
-		}
-	}
+ .list { display: flex; flex-direction: column; gap: 12rpx; padding: 0 8rpx 20rpx;
+  .list-item { display: flex; gap: 16rpx; border-radius: 12rpx; overflow: hidden; background: var(--card); padding: 14rpx; box-shadow: 0 1rpx 6rpx rgba(0,0,0,0.04);
+   &:active { opacity: 0.7; }
+   .thumb { width: 140rpx; height: 190rpx; flex-shrink: 0; border-radius: 8rpx; display: block; background: var(--card-hover); }
+   .info { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+   .title { font-size: 28rpx; font-weight: 600; color: $theme-text; display: block; line-height: 1.3; margin-bottom: 6rpx; }
+   .remark { display: inline-block; font-size: 22rpx; color: var(--accent); background: rgba(231, 76, 60, 0.08); padding: 2rpx 12rpx; border-radius: 4rpx; align-self: flex-start; }
+  }
+ }
 
-	.empty { text-align: center; padding: 80rpx 0; color: $theme-text-secondary; font-size: 28rpx; }
+ .empty { text-align: center; padding: 80rpx 0; color: $theme-text-secondary; font-size: 28rpx; }
 </style>

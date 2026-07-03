@@ -3,6 +3,8 @@
     "configurations" : [
         {
             "customPlaygroundType" : "local",
+            "localRepoPath" : "E:/jqw/programs/lyoTVMobile",
+            "packageName" : "com.fongmi.android.tv",
             "playground" : "custom",
             "type" : "uni-app:app-android"
         },

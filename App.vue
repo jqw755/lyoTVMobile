@@ -13,7 +13,7 @@ import { initApp } from '@/utils/api.js'
 const isLight = ref(false)
 const themeClass = computed(() => isLight.value ? 'light' : '')
 
-onMounted(() => {
+onMounted(async () => {
   try {
     const saved = uni.getStorageSync('lyotv_theme')
     isLight.value = saved === 'light'
