@@ -10,21 +10,24 @@
   </view>
   <view class="page" v-else-if="vod">
     <!-- 播放器 -->
-    <view class="player-area">
+    <view class="player-area" @tap="onPlayerTap">
+      <!--
+        video 始终渲染，利用 poster 显示海报，
+        src 为空时显示原生播放按钮，用户点击触发 onVideoTap 获取真实地址
+      -->
       <video
-        v-if="playerReady"
         id="detail-player"
         :key="videoKey"
         :src="videoUrl"
-        :autoplay="true"
+        :autoplay="autoPlay"
         :muted="muted"
         :controls="true"
         :page-gesture="true"
         :show-mute-btn="true"
         :enable-progress-gesture="true"
-        object-fit="contain"
-        :poster="vod.vod_poster"
-        :title="vod.vod_name"
+        object-fit="fill"
+        :poster="vod?.vod_poster || ''"
+        :title="vod?.vod_name || ''"
         :enable-play-gesture="true"
         :vslide-gesture="true"
         :vslide-gesture-in-fullscreen="true"
@@ -33,34 +36,21 @@
         :rate="playbackRate"
         style="width: 100%; height: 100%"
         @error="onVideoError"
+        @tap="onVideoTap"
       />
-      <!-- 倍速切换按钮（仅在播放器就绪时显示） -->
-      <view class="speed-btn" v-if="playerReady" @tap.stop="toggleSpeedMenu">
-        <text class="speed-btn-text">{{ playbackRate }}x</text>
-      </view>
-      <!-- 倍速选择菜单 -->
-      <view class="speed-menu" v-if="showSpeedMenu && playerReady">
-        <view
-          class="speed-option"
+
+      <!-- 倍速控制（cover-view 覆盖在原生 video 之上） -->
+      <cover-view class="speed-overlay" v-if="hasSource && showSpeed">
+        <cover-view
+          class="speed-opt"
           v-for="s in speedOptions"
           :key="s"
           :class="{ active: playbackRate === s }"
-          @tap.stop="setSpeed(s)"
+          @tap="setSpeed(s)"
         >
-          <text>{{ s }}x</text>
-        </view>
-      </view>
-      <view class="poster-overlay" v-if="!playerReady" @tap="playFirst">
-        <view class="play-entry">
-          <view class="play-icon-circle"
-            ><uni-icons type="play-filled" size="48" color="#fff"
-          /></view>
-          <text class="play-hint">点击播放</text>
-          <text class="resume-hint" v-if="savedEpisode"
-            >继续播放：{{ savedEpisode }}</text
-          >
-        </view>
-      </view>
+          <cover-view>{{ s }}x</cover-view>
+        </cover-view>
+      </cover-view>
     </view>
 
     <!-- 标题 -->
@@ -186,15 +176,23 @@ const expand = ref(false);
 const isFaved = ref(false);
 const loading = ref(false);
 const error = ref(false);
-const playerReady = ref(false);
+const hasSource = ref(false);
 const videoUrl = ref("");
 const videoKey = ref(0);
+const autoPlay = ref(false);
 const muted = ref(true);
 const savedEpisode = ref("");
 const savedProgress = ref(0);
 const playbackRate = ref(1);
-const showSpeedMenu = ref(false);
 const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const showSpeed = ref(false);
+let speedTimer = null;
+
+function showSpeedTemporarily() {
+  showSpeed.value = true;
+  if (speedTimer) clearTimeout(speedTimer);
+  speedTimer = setTimeout(() => { showSpeed.value = false; }, 4000);
+}
 let pageId = "";
 let pageKey = "";
 
@@ -221,7 +219,7 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   uni.$off("mutedChanged");
-  playerReady.value = false;
+  if (speedTimer) clearTimeout(speedTimer);
 });
 
 async function loadDetail() {
@@ -281,18 +279,23 @@ function extractUrl(u) {
   return r;
 }
 
-function playFirst() {
-  playEpisode(currentIndex.value);
-}
 function switchFlag(f) {
   activeFlag.value = f;
   currentIndex.value = 0;
   showAll.value = false;
   savedEpisode.value = "";
   savedProgress.value = 0;
-  if (playerReady.value) {
-    playerReady.value = false;
+  if (hasSource.value) {
+    hasSource.value = false;
+    autoPlay.value = false;
     if (currentEpisodes.value.length > 0) setTimeout(() => playEpisode(0), 100);
+  }
+}
+
+function onVideoTap() {
+  // 用户点击了 video（含 poster 上的播放按钮），触发加载真实地址
+  if (!hasSource.value && currentEpisodes.value.length > 0) {
+    playEpisode(currentIndex.value);
   }
 }
 
@@ -309,12 +312,11 @@ function playEpisode(index) {
         uni.showToast({ title: "未获取到播放地址", icon: "none" });
         return;
       }
-      playerReady.value = false;
-      setTimeout(() => {
-        videoKey.value++;
-        videoUrl.value = url;
-        playerReady.value = true;
-      }, 80);
+      videoKey.value++;
+      videoUrl.value = url;
+      hasSource.value = true;
+      autoPlay.value = true;
+      showSpeedTemporarily();
     })
     .catch((e) => {
       uni.showToast({
@@ -329,15 +331,15 @@ function onVideoError() {
   uni.showToast({ title: "视频加载失败，请切换站源", icon: "none" });
 }
 
-function toggleSpeedMenu() {
-  showSpeedMenu.value = !showSpeedMenu.value;
-}
-
 function setSpeed(s) {
   playbackRate.value = s;
-  showSpeedMenu.value = false;
-  uni.showToast({ title: s + 'x 倍速', icon: 'none' });
+  showSpeedTemporarily();
 }
+
+function onPlayerTap() {
+  if (hasSource.value) showSpeedTemporarily();
+}
+
 function toggleFav() {
   if (isFaved.value) {
     removeFavorite(vod.value.vod_id);
@@ -401,88 +403,32 @@ function stripHtml(html) {
   background: #000;
   overflow: hidden;
 }
-.poster-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-}
 
-/* 倍速按钮 */
-.speed-btn {
+/* 倍速控制（cover-view 覆盖在原生 video 之上） */
+.speed-overlay {
   position: absolute;
-  right: 20rpx;
-  top: 20rpx;
+  right: 16rpx;
+  top: 16rpx;
   z-index: 20;
-  background: rgba(0, 0, 0, 0.55);
-  border-radius: 8rpx;
-  padding: 6rpx 16rpx;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 6rpx;
 }
-.speed-btn-text {
-  font-size: 24rpx;
-  color: #fff;
-  font-weight: 500;
-}
-
-/* 倍速选择菜单 */
-.speed-menu {
-  position: absolute;
-  right: 20rpx;
-  top: 68rpx;
-  z-index: 20;
-  background: rgba(30, 30, 30, 0.92);
-  border-radius: 12rpx;
-  padding: 8rpx 0;
-  overflow: hidden;
-  min-width: 120rpx;
-}
-.speed-option {
-  padding: 14rpx 28rpx;
-  text-align: center;
-  font-size: 26rpx;
+.speed-opt {
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.5);
+  font-size: 22rpx;
   color: rgba(255, 255, 255, 0.7);
-  transition: all 0.15s;
-
-  &:active {
-    background: rgba(255, 255, 255, 0.1);
-  }
+  text-align: center;
+  line-height: 1.6;
 
   &.active {
+    background: $theme-accent;
     color: #fff;
     font-weight: 600;
   }
 }
-.play-entry {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16rpx;
-}
-.play-icon-circle {
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.play-hint {
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.8);
-}
-.resume-hint {
-  font-size: 22rpx;
-  color: var(--accent);
-  background: rgba(231, 76, 60, 0.2);
-  padding: 4rpx 20rpx;
-  border-radius: 20rpx;
-}
+
 .info-section {
   padding: 24rpx 20rpx 16rpx;
   background: var(--card);

@@ -44,7 +44,9 @@
 		   <uni-icons type="clock" size="22" color="#3498db" />
 		  </view>
 		  <text class="label">观看历史</text>
-		  <uni-icons type="arrowright" size="16" color="#555" />
+		  <view class="icon-box clock">
+		   <uni-icons type="arrowright" size="16" color="#555" />
+		  </view>
 		 </view>
 		 <view class="menu-item" @tap="goPage('settings')">
 		  <view class="icon-box set">
@@ -109,7 +111,7 @@
 
 		<!-- 关于 -->
 		<view class="about">
-			<text class="version">lyoTV-乐意欧影视</text>
+			<text class="version">乐意欧TV</text>
 		</view>
 	</view>
 </template>
