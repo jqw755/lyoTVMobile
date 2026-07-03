@@ -159,7 +159,7 @@
 		})
 	}
 
-	function setGridCols(cols) {
+	function setImgSize(cols) {
 	 currentCols.value = cols
 	 try {
 	  uni.setStorageSync('lyotv_grid_cols', cols)

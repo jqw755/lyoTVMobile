@@ -14,7 +14,7 @@
 	"pages": [{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "lyoTV",
+				"navigationBarTitleText": "乐意欧TV",
 				"enablePullDownRefresh": true,
 				"backgroundColorContent": "#141414"
 			}
@@ -85,7 +85,7 @@
 	},
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
-		"navigationBarTitleText": "lyoTV",
+		"navigationBarTitleText": "乐意欧TV",
 		"navigationBarBackgroundColor": "#1a1a1a",
 		"backgroundColor": "#141414",
 		"backgroundColorContent": "#141414"

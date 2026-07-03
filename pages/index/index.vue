@@ -1,45 +1,49 @@
 <template>
-  <scroll-view class="page" scroll-y @scrolltolower="onLoadMore" lower-threshold="100">
-    <!-- 顶部搜索入口 -->
-    <view class="top-search" @tap="goSearch">
-      <uni-icons type="search" size="16" color="#888" />
-      <text class="top-search-text">搜影视、演员...</text>
+  <view class="page">
+    <!-- 顶部固定区域：搜索入口 + 分类导航 -->
+    <view class="header">
+      <view class="top-search" @tap="goSearch">
+        <uni-icons type="search" size="16" color="#888" />
+        <text class="top-search-text">搜影视、演员...</text>
+      </view>
+
+      <category-nav
+        :list="tabList"
+        :activeId="activeTid"
+        @change="onCategoryChange"
+      />
     </view>
 
-    <!-- 分类导航（含"推荐"前置tab） -->
-    <category-nav
-      :list="tabList"
-      :activeId="activeTid"
-      @change="onCategoryChange"
-    />
-
-    <!-- 影视列表 -->
-    <view class="section">
-      <view class="grid" :style="gridStyle">
-        <view
-          class="grid-item"
-          v-for="item in list"
-          :key="item.vod_id"
-          @tap="goDetail(item)"
-        >
-          <vod-card :item="item" />
+    <!-- 可滚动列表 -->
+    <scroll-view class="scroll-body" scroll-y @scrolltolower="onLoadMore" lower-threshold="100">
+      <view class="section">
+        <view class="grid" :style="{ gap: gridGap }">
+          <view
+            class="grid-item"
+            v-for="item in list"
+            :key="item.vod_id"
+            :style="{ width: gridItemWidth }"
+            @tap="goDetail(item)"
+          >
+            <vod-card :item="item" />
+          </view>
         </view>
       </view>
-    </view>
 
-    <!-- 加载中 / 没有更多 -->
-    <view v-if="list.length > 0" class="load-more">
-      <template v-if="loadingMore">
-        <uni-icons type="spinner-cycle" size="14" color="#888" />
-        <text class="load-text"> 加载中...</text>
-      </template>
-      <template v-else-if="noMore">
-        <view class="load-line" />
-        <text class="load-text">没有更多了</text>
-        <view class="load-line" />
-      </template>
-    </view>
-  </scroll-view>
+      <!-- 加载中 / 没有更多 -->
+      <view v-if="list.length > 0" class="load-more">
+        <template v-if="loadingMore">
+          <uni-icons type="spinner-cycle" size="14" color="#888" />
+          <text class="load-text"> 加载中...</text>
+        </template>
+        <template v-else-if="noMore">
+          <view class="load-line" />
+          <text class="load-text">没有更多了</text>
+          <view class="load-line" />
+        </template>
+      </view>
+    </scroll-view>
+  </view>
 </template>
 
 <script setup>
@@ -71,14 +75,20 @@ uni.$on('gridColsChanged', (val) => {
   if (val) gridCols.value = val
 })
 
-const gridStyle = computed(() => {
+const gridConfig = computed(() => {
   const config = {
-    large: { cols: 3, gap: '16rpx' },
-    medium: { cols: 4, gap: '12rpx' },
-    small: { cols: 5, gap: '10rpx' },
+    large: { cols: 3, gap: 16 },
+    medium: { cols: 4, gap: 12 },
+    small: { cols: 5, gap: 10 },
   }
-  const c = config[gridCols.value] || config.medium
-  return { gridTemplateColumns: `repeat(${c.cols}, 1fr)`, gap: c.gap }
+  return config[gridCols.value] || config.medium
+})
+
+const gridGap = computed(() => `${gridConfig.value.gap}rpx`)
+
+const gridItemWidth = computed(() => {
+  const { cols, gap } = gridConfig.value
+  return `calc((100% - ${gap * (cols - 1)}rpx) / ${cols})`
 })
 
 const tabList = computed(() => [RECOMMEND_TAB, ...classes.value])
@@ -176,17 +186,35 @@ uni.addInterceptor('navigateBack', {
 </script>
 
 <style lang="scss" scoped>
-.page { height: 100vh; padding-bottom: 12rpx; background: var(--bg-primary); }
+.page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+.header {
+  flex-shrink: 0;
+  background: var(--bg-primary);
+  z-index: 10;
+  padding-bottom: 4rpx;
+}
 
 .top-search {
   display: flex; align-items: center; gap: 10rpx;
-  margin: 12rpx 20rpx; padding: 16rpx 24rpx;
+  margin: 12rpx 20rpx 0; padding: 16rpx 24rpx;
   background: var(--card); border-radius: 40rpx;
   .top-search-text { font-size: 26rpx; color: $theme-text-secondary; }
 }
 
+.scroll-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
 .section { padding: 0 16rpx; }
-.grid { display: grid; }
+.grid { display: flex; flex-wrap: wrap; }
+.grid-item { box-sizing: border-box; }
 
 .load-more {
   padding: 36rpx 0; text-align: center;

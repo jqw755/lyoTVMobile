@@ -30,9 +30,26 @@
         :vslide-gesture-in-fullscreen="true"
         :http-cache="false"
         play-btn-position="center"
+        :rate="playbackRate"
         style="width: 100%; height: 100%"
         @error="onVideoError"
       />
+      <!-- 倍速切换按钮（仅在播放器就绪时显示） -->
+      <view class="speed-btn" v-if="playerReady" @tap.stop="toggleSpeedMenu">
+        <text class="speed-btn-text">{{ playbackRate }}x</text>
+      </view>
+      <!-- 倍速选择菜单 -->
+      <view class="speed-menu" v-if="showSpeedMenu && playerReady">
+        <view
+          class="speed-option"
+          v-for="s in speedOptions"
+          :key="s"
+          :class="{ active: playbackRate === s }"
+          @tap.stop="setSpeed(s)"
+        >
+          <text>{{ s }}x</text>
+        </view>
+      </view>
       <view class="poster-overlay" v-if="!playerReady" @tap="playFirst">
         <view class="play-entry">
           <view class="play-icon-circle"
@@ -175,6 +192,9 @@ const videoKey = ref(0);
 const muted = ref(true);
 const savedEpisode = ref("");
 const savedProgress = ref(0);
+const playbackRate = ref(1);
+const showSpeedMenu = ref(false);
+const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2];
 let pageId = "";
 let pageKey = "";
 
@@ -216,6 +236,7 @@ async function loadDetail() {
       return;
     }
     vod.value = item;
+    uni.setNavigationBarTitle({ title: item.vod_name });
     if (!vod.value.site_key && pageKey) vod.value.site_key = pageKey;
     flags.value = item?.vodFlags || [];
     if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
@@ -307,6 +328,16 @@ function playEpisode(index) {
 function onVideoError() {
   uni.showToast({ title: "视频加载失败，请切换站源", icon: "none" });
 }
+
+function toggleSpeedMenu() {
+  showSpeedMenu.value = !showSpeedMenu.value;
+}
+
+function setSpeed(s) {
+  playbackRate.value = s;
+  showSpeedMenu.value = false;
+  uni.showToast({ title: s + 'x 倍速', icon: 'none' });
+}
 function toggleFav() {
   if (isFaved.value) {
     removeFavorite(vod.value.vod_id);
@@ -374,6 +405,54 @@ function stripHtml(html) {
   position: absolute;
   inset: 0;
   z-index: 10;
+}
+
+/* 倍速按钮 */
+.speed-btn {
+  position: absolute;
+  right: 20rpx;
+  top: 20rpx;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 8rpx;
+  padding: 6rpx 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.speed-btn-text {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* 倍速选择菜单 */
+.speed-menu {
+  position: absolute;
+  right: 20rpx;
+  top: 68rpx;
+  z-index: 20;
+  background: rgba(30, 30, 30, 0.92);
+  border-radius: 12rpx;
+  padding: 8rpx 0;
+  overflow: hidden;
+  min-width: 120rpx;
+}
+.speed-option {
+  padding: 14rpx 28rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.15s;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &.active {
+    color: #fff;
+    font-weight: 600;
+  }
 }
 .play-entry {
   position: absolute;
