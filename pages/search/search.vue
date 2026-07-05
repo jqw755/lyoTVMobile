@@ -1,31 +1,61 @@
 <template>
 	<view class="page">
-		<!-- 搜索框 -->
-		<view class="search-bar">
-			<view class="search-input">
-				<uni-icons type="search" size="18" color="#888" />
-				<input v-model="keyword" placeholder="搜影视、演员..." placeholder-class="placeholder" confirm-type="search"
-					@confirm="doSearch" />
-				<text v-if="keyword" class="clear" @tap="keyword = ''">✕</text>
-				<text class="search-btn" @tap="doSearch">搜索</text>
+		<!-- 顶部自定义导航栏 -->
+		<view class="nav-header" :style="{ paddingTop: statusBarHeight + 'px' }">
+			<view class="nav-bar">
+				<view class="nav-back" @tap="goBack">
+					<uni-icons type="arrowleft" size="22" color="#f0f0f0" />
+				</view>
+				<view class="nav-search">
+					<uni-icons type="search" size="18" color="#888" />
+					<input v-model="keyword" placeholder="搜索影片、演员、导演" placeholder-class="nav-placeholder"
+						confirm-type="search" @confirm="doSearch" />
+					<text v-if="keyword" class="nav-clear" @tap="keyword = ''">✕</text>
+				</view>
+				<text class="nav-btn" @tap="doSearch">搜索</text>
 			</view>
 		</view>
 
-		<!-- 搜索前：历史 -->
+		<!-- 搜索前：热门搜索 + 历史 -->
 		<template v-if="!searched">
-			<view class="section" v-if="historyTags.length > 0">
-				<view class="section-header">
-					<uni-icons type="clock" size="14" color="#888" />
-					<text class="section-title"> 搜索历史</text>
-					<view class="clear-btn" @tap="clearHistory">
-						<uni-icons type="trash" size="14" color="#888" /><text style="margin-left:4rpx">清空</text>
+			<scroll-view class="before-scroll" scroll-y>
+				<!-- 搜索历史 -->
+				<view class="history-section" v-if="historyTags.length > 0">
+					<view class="history-header">
+						<text class="section-title">搜索历史</text>
+						<view v-if="!editing" class="history-header-right" @tap="editing = true">
+							<uni-icons type="trash" size="16" color="#888" />
+						</view>
+						<view v-else class="history-actions">
+							<text class="history-action-btn" @tap.stop="clearAllHistory">全部删除</text>
+							<text class="history-action-btn cancel" @tap.stop="editing = false">取消</text>
+						</view>
+					</view>
+					<view class="history-list">
+						<view class="history-item" v-for="(tag, i) in historyTags" :key="i"
+							@tap="editing ? null : tapTag(tag)">
+							<view class="history-icon">
+								<view class="history-dot" />
+							</view>
+							<text class="history-text">{{ tag }}</text>
+							<text v-if="editing" class="history-del" @tap.stop="removeHistoryItem(i)">
+								<uni-icons type="closeempty" size="16" color="#999" />
+							</text>
+							<uni-icons v-else type="arrowright" size="14" color="#555" />
+						</view>
 					</view>
 				</view>
-				<view class="tags">
-					<text v-for="(tag,i) in historyTags" :key="i" class="tag" @tap="tapHistory(tag)">{{ tag }}</text>
+
+				<!-- 热门搜索 -->
+				<view class="hot-section" v-if="hotTags.length > 0">
+					<text class="section-title">热门搜索</text>
+					<view class="hot-tags">
+						<text v-for="(tag, i) in hotTags" :key="i" class="hot-tag" @tap="tapTag(tag)">{{ tag }}</text>
+					</view>
 				</view>
-			</view>
-			<view v-else class="empty-hint">输入关键词搜索影视</view>
+
+				<view v-if="historyTags.length === 0" class="empty-hint">输入关键词搜索影视</view>
+			</scroll-view>
 		</template>
 
 		<!-- 搜索后：左站点 + 右资源 -->
@@ -33,12 +63,10 @@
 			<view class="split">
 				<!-- 左侧：站点列表（竖向） -->
 				<scroll-view class="left" scroll-y>
-					<!-- "全部" tab -->
 					<view class="site-item" :class="{ active: currentKey === '__all__' }" @tap="selectSite('__all__')">
 						<text class="site-name">全部</text>
 						<text class="site-num">{{ allResults.length }}</text>
 					</view>
-					<!-- 各站点 -->
 					<view v-for="s in siteList" :key="s.key" class="site-item"
 						:class="{ active: currentKey === s.key, done: siteDone[s.key] }" @tap="selectSite(s.key)">
 						<text class="site-name" :lines="1">{{ s.name }}</text>
@@ -47,7 +75,7 @@
 					</view>
 				</scroll-view>
 
-				<!-- 右侧：当前站资源列表（单列瀑布流） -->
+				<!-- 右侧：当前站资源列表 -->
 				<scroll-view class="right" scroll-y>
 					<view class="right-header">
 						<text class="right-title">{{ currentTitle }}</text>
@@ -70,24 +98,61 @@
 </template>
 
 <script setup>
-	import { ref, computed } from 'vue'
-	import { searchSite } from '@/utils/api.js'
-	import { addHistory } from '@/utils/store.js'
-	import { store } from '@/utils/appState.js'
+	import {
+		ref,
+		computed,
+		onMounted
+	} from 'vue'
+	import {
+		searchSite
+	} from '@/utils/api.js'
+	import {
+		addHistory
+	} from '@/utils/store.js'
+	import {
+		store
+	} from '@/utils/appState.js'
 
 	const keyword = ref('')
 	const searched = ref(false)
 	const historyTags = ref([])
-	// 站点列表（直接从 store.sites 取，启动时已加载）
+	const statusBarHeight = ref(0)
+	const editing = ref(false)
+	const hotTags = ref([])
+
+	// 热门搜索：缓存 key
+	const HOT_CACHE_KEY = 'lyotv_hot_search'
+	const HOT_API = 'https://api.web.360kan.com/v1/rank?cat=1'
+
+	// 加载热门搜索（先缓存，再异步刷新）
+	async function loadHot() {
+		// 1. 先显示缓存
+		try {
+			const cached = uni.getStorageSync(HOT_CACHE_KEY)
+			if (cached) hotTags.value = cached
+		} catch {}
+		// 2. 异步请求最新的
+		try {
+			const res = await uni.request({
+				url: HOT_API
+			})
+			const body = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
+			if (body?.data?.length) {
+				const tags = body.data.map(item => item.title).filter(Boolean)
+				hotTags.value = tags
+				uni.setStorageSync(HOT_CACHE_KEY, tags)
+			}
+		} catch (e) {
+			// 网络失败时保留缓存
+		}
+	}
+
+	// 站点列表
 	const siteList = computed(() => store.sites || [])
-	// 每个站点的搜索结果
 	const siteResults = ref({})
-	// 每个站点是否已搜完
 	const siteDone = ref({})
-	// 当前选中的 key（'__all__' 表示全部）
 	const currentKey = ref('__all__')
 
-	// "全部" 合并结果
 	const allResults = computed(() => {
 		const list = []
 		for (const s of siteList.value) {
@@ -97,24 +162,42 @@
 		return list
 	})
 
-	// 当前显示的结果列表
 	const currentList = computed(() => {
 		if (currentKey.value === '__all__') return allResults.value
 		return siteResults.value[currentKey.value] || []
 	})
 
-	// 当前标题
 	const currentTitle = computed(() => {
 		if (currentKey.value === '__all__') return '全部'
 		const s = siteList.value.find(s => s.key === currentKey.value)
 		return s ? s.name : ''
 	})
 
-	try {
-		historyTags.value = uni.getStorageSync('lyotv_search_history') || []
-	} catch {}
+	onMounted(() => {
+		// 获取状态栏高度
+		try {
+			const sys = uni.getSystemInfoSync()
+			statusBarHeight.value = sys.statusBarHeight || 0
+		} catch {
+			statusBarHeight.value = 24
+		}
 
-	// 接收首页传入的搜索词
+		// 加载搜索历史
+		try {
+			historyTags.value = uni.getStorageSync('lyotv_search_history') || []
+		} catch {}
+
+		// 加载热门搜索（同 fongmi 插件：先从缓存展示，再异步请求刷新）
+		loadHot()
+
+		// 处理首页跳转入参
+		const kw = getPageKeyword()
+		if (kw) {
+			keyword.value = kw
+			setTimeout(() => doSearch(), 200)
+		}
+	})
+
 	function getPageKeyword() {
 		try {
 			const pages = getCurrentPages()
@@ -124,11 +207,8 @@
 		return ''
 	}
 
-	// 页面加载时自动处理首页跳转
-	const pendingKw = getPageKeyword()
-	if (pendingKw) {
-		keyword.value = pendingKw
-		setTimeout(() => doSearch(), 200)
+	function goBack() {
+		uni.navigateBack()
 	}
 
 	function saveHistory(kw) {
@@ -138,14 +218,21 @@
 		uni.setStorageSync('lyotv_search_history', list)
 	}
 
-	function tapHistory(kw) {
+	function tapTag(kw) {
 		keyword.value = kw
 		doSearch()
 	}
 
-	function clearHistory() {
+	function clearAllHistory() {
 		historyTags.value = []
 		uni.setStorageSync('lyotv_search_history', [])
+		editing.value = false
+	}
+
+	function removeHistoryItem(index) {
+		historyTags.value = historyTags.value.filter((_, i) => i !== index)
+		uni.setStorageSync('lyotv_search_history', historyTags.value)
+		if (historyTags.value.length === 0) editing.value = false
 	}
 
 	async function doSearch() {
@@ -154,10 +241,12 @@
 		searched.value = true
 		saveHistory(kw)
 
-		// 直接取 store.sites（启动/订阅时已加载）
 		const sites = siteList.value
 		if (!sites.length) {
-			uni.showToast({ title: '暂无可搜索站点', icon: 'none' })
+			uni.showToast({
+				title: '暂无可搜索站点',
+				icon: 'none'
+			})
 			return
 		}
 
@@ -165,11 +254,13 @@
 		siteDone.value = {}
 		currentKey.value = '__all__'
 
-		// 逐站提交搜索，谁返回谁渲染（对标 ViewModelSearchRunner）
 		sites.forEach(site => {
 			searchSite(kw, site.key)
 				.then(data => {
-					siteResults.value = { ...siteResults.value, [site.key]: data?.list || [] }
+					siteResults.value = {
+						...siteResults.value,
+						[site.key]: data?.list || []
+					}
 					siteDone.value[site.key] = true
 				})
 				.catch(() => {
@@ -178,60 +269,389 @@
 		})
 	}
 
-	function selectSite(key) { currentKey.value = key }
+	function selectSite(key) {
+		currentKey.value = key
+	}
 
 	function goDetail(item) {
 		addHistory(item)
-		uni.navigateTo({ url: `/pages/detail/detail?id=${item.vod_id}&key=${item.site_key || ''}` })
+		uni.navigateTo({
+			url: `/pages/detail/detail?id=${item.vod_id}&key=${item.site_key || ''}`
+		})
 	}
 </script>
 
 <style lang="scss" scoped>
- .page { height: 100vh; display: flex; flex-direction: column; background: var(--bg-primary); }
- .search-bar { padding: 12rpx 20rpx; background: var(--bg-primary); flex-shrink: 0; }
- .search-input { display: flex; align-items: center; gap: 12rpx; background: var(--card); border-radius: 40rpx; padding: 12rpx 20rpx;
-  input { flex: 1; font-size: 28rpx; color: $theme-text; }
-  .placeholder { color: $theme-text-secondary; font-size: 28rpx; }
-  .clear { color: $theme-text-secondary; font-size: 28rpx; padding: 0 8rpx; }
-  .search-btn { color: #fff; background: var(--accent); font-size: 26rpx; padding: 8rpx 24rpx; border-radius: 30rpx; flex-shrink: 0; }
- }
- .section { padding: 0 20rpx; margin-top: 16rpx;
-  &-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rpx; }
-  &-title { font-size: 28rpx; font-weight: 600; color: $theme-text; }
-  .clear-btn { font-size: 24rpx; color: $theme-text-secondary; }
- }
- .tags { display: flex; flex-wrap: wrap; gap: 12rpx;
-  .tag { background: var(--card); color: var(--text-secondary); font-size: 24rpx; padding: 10rpx 24rpx; border-radius: 30rpx; }
- }
- .empty-hint { text-align: center; padding: 80rpx 0; color: $theme-text-secondary; font-size: 28rpx; }
+	.page {
+		height: 100vh;
+		display: flex;
+		flex-direction: column;
+		background: var(--bg-primary);
+	}
 
- .split { flex: 1; display: flex; overflow: hidden; }
+	/* ========== 顶栏 ========== */
+	.nav-header {
+		flex-shrink: 0;
+		background: var(--bg-primary);
+		padding-bottom: 12rpx;
+	}
 
- .left { width: 200rpx; background: var(--card); flex-shrink: 0;
-  .site-item { display: flex; align-items: center; justify-content: space-between; padding: 18rpx 14rpx; border-bottom: 1rpx solid var(--border);
-   &.active { background: var(--accent); .site-name { color: #fff; } .site-num { color: rgba(255,255,255,0.8); } }
-  }
-  .site-name { font-size: 24rpx; color: $theme-text; flex: 1; }
-  .site-num { font-size: 20rpx; color: $theme-text-secondary; background: rgba(0,0,0,0.06); padding: 2rpx 12rpx; border-radius: 20rpx; }
-  .site-loading { font-size: 24rpx; color: var(--accent); animation: pulse 1s infinite; }
- }
- @keyframes pulse { 0%,100% { opacity: 0.3 } 50% { opacity: 1 } }
+	.nav-bar {
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+		padding: 0 16rpx;
+	}
 
- .right { flex: 1; padding: 0 16rpx;
-  .right-header { display: flex; align-items: center; justify-content: space-between; padding: 16rpx 0 8rpx; position: sticky; top: 0; background: var(--bg-primary); z-index: 2; }
-  .right-title { font-size: 28rpx; font-weight: 600; color: $theme-text; }
-  .right-count { font-size: 22rpx; color: $theme-text-secondary; }
- }
+	.nav-back {
+		width: 56rpx;
+		height: 56rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
 
- .list { display: flex; flex-direction: column; gap: 12rpx; padding: 0 8rpx 20rpx;
-  .list-item { display: flex; gap: 16rpx; border-radius: 12rpx; overflow: hidden; background: var(--card); padding: 14rpx; box-shadow: 0 1rpx 6rpx rgba(0,0,0,0.04);
-   &:active { opacity: 0.7; }
-   .thumb { width: 140rpx; height: 190rpx; flex-shrink: 0; border-radius: 8rpx; display: block; background: var(--card-hover); }
-   .info { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-   .title { font-size: 28rpx; font-weight: 600; color: $theme-text; display: block; line-height: 1.3; margin-bottom: 6rpx; }
-   .remark { display: inline-block; font-size: 22rpx; color: var(--accent); background: rgba(231, 76, 60, 0.08); padding: 2rpx 12rpx; border-radius: 4rpx; align-self: flex-start; }
-  }
- }
+		&:active {
+			opacity: 0.6;
+		}
+	}
 
- .empty { text-align: center; padding: 80rpx 0; color: $theme-text-secondary; font-size: 28rpx; }
+	.nav-search {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		gap: 10rpx;
+		background: var(--card);
+		border-radius: 40rpx;
+		padding: 0 20rpx;
+		height: 64rpx;
+
+		input {
+			flex: 1;
+			font-size: 26rpx;
+			color: var(--text-primary);
+		}
+
+		.nav-placeholder {
+			color: var(--text-secondary);
+			font-size: 26rpx;
+		}
+
+		.nav-clear {
+			color: var(--text-secondary);
+			font-size: 26rpx;
+			padding: 0 4rpx;
+		}
+	}
+
+	.nav-btn {
+		background: $theme-accent;
+		color: #fff;
+		font-size: 26rpx;
+		padding: 12rpx 28rpx;
+		border-radius: 40rpx;
+		flex-shrink: 0;
+
+		&:active {
+			opacity: 0.8;
+		}
+	}
+
+	/* ========== 搜索前滚动区域 ========== */
+	.before-scroll {
+		flex: 1;
+	}
+
+	/* ========== 热门搜索 ========== */
+	.hot-section {
+		padding: 20rpx 20rpx 0;
+	}
+
+	.section-title {
+		font-size: 28rpx;
+		font-weight: 700;
+		color: var(--text-primary);
+		display: block;
+		margin-bottom: 16rpx;
+	}
+
+	.hot-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12rpx;
+	}
+
+	.hot-tag {
+		background: var(--card);
+		color: var(--text-primary);
+		font-size: 24rpx;
+		padding: 10rpx 24rpx;
+		border-radius: 30rpx;
+
+		&:active {
+			opacity: 0.7;
+		}
+	}
+
+	/* ========== 搜索历史 ========== */
+	.history-section {
+		padding: 28rpx 20rpx 0;
+	}
+
+	.history-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 12rpx;
+
+		.section-title {
+			margin-bottom: 0;
+		}
+	}
+
+	.history-header-right {
+		padding: 8rpx;
+
+		&:active {
+			opacity: 0.6;
+		}
+	}
+
+	.history-actions {
+		display: flex;
+		align-items: center;
+		gap: 16rpx;
+	}
+
+	.history-action-btn {
+		font-size: 24rpx;
+		color: var(--accent);
+		padding: 8rpx 12rpx;
+		border-radius: 6rpx;
+
+		&.cancel {
+			color: var(--text-secondary);
+		}
+
+		&:active {
+			opacity: 0.7;
+		}
+	}
+
+	.history-list {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.history-item {
+		display: flex;
+		align-items: center;
+		gap: 16rpx;
+		padding: 16rpx 0;
+		border-bottom: 1rpx solid var(--border);
+
+		&:last-child {
+			border-bottom: none;
+		}
+
+		&:active {
+			opacity: 0.7;
+		}
+
+		.history-icon {
+			width: 36rpx;
+			height: 36rpx;
+			border-radius: 50%;
+			background: var(--card);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+
+			.history-dot {
+				width: 8rpx;
+				height: 8rpx;
+				border-radius: 50%;
+				background: var(--text-secondary);
+			}
+		}
+
+		.history-text {
+			flex: 1;
+			font-size: 26rpx;
+			color: var(--text-primary);
+		}
+
+		.history-del {
+			padding: 8rpx;
+
+			&:active {
+				opacity: 0.6;
+			}
+		}
+	}
+
+	/* ========== 搜索前空状态 ========== */
+	.empty-hint {
+		text-align: center;
+		padding: 80rpx 0;
+		color: var(--text-secondary);
+		font-size: 28rpx;
+	}
+
+	/* ========== 搜索结果：左右分栏 ========== */
+	.split {
+		flex: 1;
+		display: flex;
+		overflow: hidden;
+	}
+
+	.left {
+		width: 200rpx;
+		background: var(--card);
+		flex-shrink: 0;
+
+		.site-item {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 18rpx 14rpx;
+			border-bottom: 1rpx solid var(--border);
+
+			&.active {
+				background: var(--accent);
+
+				.site-name {
+					color: #fff;
+				}
+
+				.site-num {
+					color: rgba(255, 255, 255, 0.8);
+				}
+			}
+		}
+
+		.site-name {
+			font-size: 24rpx;
+			color: var(--text-primary);
+			flex: 1;
+		}
+
+		.site-num {
+			font-size: 20rpx;
+			color: var(--text-secondary);
+			background: rgba(0, 0, 0, 0.06);
+			padding: 2rpx 12rpx;
+			border-radius: 20rpx;
+		}
+
+		.site-loading {
+			font-size: 24rpx;
+			color: var(--accent);
+			animation: pulse 1s infinite;
+		}
+	}
+
+	@keyframes pulse {
+
+		0%,
+		100% {
+			opacity: 0.3;
+		}
+
+		50% {
+			opacity: 1;
+		}
+	}
+
+	.right {
+		flex: 1;
+		padding: 0 16rpx;
+
+		.right-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 16rpx 0 8rpx;
+			position: sticky;
+			top: 0;
+			background: var(--bg-primary);
+			z-index: 2;
+		}
+
+		.right-title {
+			font-size: 28rpx;
+			font-weight: 600;
+			color: var(--text-primary);
+		}
+
+		.right-count {
+			font-size: 22rpx;
+			color: var(--text-secondary);
+		}
+	}
+
+	.list {
+		display: flex;
+		flex-direction: column;
+		gap: 12rpx;
+		padding: 0 8rpx 20rpx;
+
+		.list-item {
+			display: flex;
+			gap: 16rpx;
+			border-radius: 12rpx;
+			overflow: hidden;
+			background: var(--card);
+			padding: 14rpx;
+			box-shadow: 0 1rpx 6rpx rgba(0, 0, 0, 0.04);
+
+			&:active {
+				opacity: 0.7;
+			}
+
+			.thumb {
+				width: 140rpx;
+				height: 190rpx;
+				flex-shrink: 0;
+				border-radius: 8rpx;
+				display: block;
+				background: var(--card-hover);
+			}
+
+			.info {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				min-width: 0;
+			}
+
+			.title {
+				font-size: 28rpx;
+				font-weight: 600;
+				color: var(--text-primary);
+				display: block;
+				line-height: 1.3;
+				margin-bottom: 6rpx;
+			}
+
+			.remark {
+				display: inline-block;
+				font-size: 22rpx;
+				color: var(--accent);
+				background: rgba(254, 128, 39, 0.1);
+				padding: 2rpx 12rpx;
+				border-radius: 4rpx;
+				align-self: flex-start;
+			}
+		}
+	}
+
+	.empty {
+		text-align: center;
+		padding: 80rpx 0;
+		color: var(--text-secondary);
+		font-size: 28rpx;
+	}
 </style>

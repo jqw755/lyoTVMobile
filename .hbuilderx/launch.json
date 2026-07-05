@@ -2,7 +2,7 @@
     "version" : "1.0",
     "configurations" : [
         {
-            "customPlaygroundType" : "local",
+            "customPlaygroundType" : "device",
             "localRepoPath" : "E:/jqw/programs/lyoTVMobile",
             "packageName" : "com.fongmi.android.tv",
             "playground" : "custom",

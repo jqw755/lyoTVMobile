@@ -383,7 +383,7 @@ function stripHtml(html) {
 }
 .status-text {
   font-size: 28rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
 }
 .retry-btn {
   font-size: 26rpx;
@@ -444,7 +444,7 @@ function stripHtml(html) {
 .vod-title {
   font-size: 34rpx;
   font-weight: 700;
-  color: $theme-text;
+  color: var(--text-primary);
   flex: 1;
   line-height: 1.3;
 }
@@ -456,13 +456,13 @@ function stripHtml(html) {
 }
 .tag {
   font-size: 22rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
   background: var(--card-hover);
   padding: 4rpx 14rpx;
   border-radius: 6rpx;
   &.status {
     color: var(--accent);
-    background: rgba(231, 76, 60, 0.1);
+    background: rgba(254, 128, 39, 0.12);
     font-weight: 500;
   }
 }
@@ -476,7 +476,7 @@ function stripHtml(html) {
 }
 .source-label {
   font-size: 24rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 .source-tabs {
@@ -492,7 +492,7 @@ function stripHtml(html) {
   border-radius: 30rpx;
   background: var(--card-hover);
   font-size: 22rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
   &.active {
     background: var(--accent);
     color: #fff;
@@ -514,12 +514,12 @@ function stripHtml(html) {
   &-title {
     font-size: 28rpx;
     font-weight: 600;
-    color: $theme-text;
+    color: var(--text-primary);
   }
 }
 .ep-count {
   font-size: 24rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
 }
 .episodes {
   display: flex;
@@ -531,7 +531,7 @@ function stripHtml(html) {
   border-radius: 8rpx;
   background: var(--card-hover);
   font-size: 24rpx;
-  color: $theme-text;
+  color: var(--text-primary);
   min-width: 96rpx;
   text-align: center;
   transition: all 0.15s;
@@ -545,13 +545,13 @@ function stripHtml(html) {
   }
   &.ep-more {
     color: var(--accent);
-    background: rgba(231, 76, 60, 0.08);
+    background: rgba(254, 128, 39, 0.1);
     min-width: auto;
   }
 }
 .content {
   font-size: 26rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
   line-height: 1.7;
   white-space: pre-wrap;
 }

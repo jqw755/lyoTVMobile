@@ -20,12 +20,13 @@
 			}
 		},
 		{
-			"path": "pages/search/search",
-			"style": {
-				"navigationBarTitleText": "搜索",
-				"backgroundColorContent": "#141414"
-			}
-		},
+		  "path": "pages/search/search",
+		  "style": {
+		   "navigationBarTitleText": "搜索",
+		   "navigationStyle": "custom",
+		   "backgroundColorContent": "#141414"
+		  }
+		 },
 		{
 			"path": "pages/detail/detail",
 			"style": {
@@ -52,7 +53,7 @@
 		{
 			"path": "pages/mine/mine",
 			"style": {
-				"navigationBarTitleText": "个人中心",
+				"navigationBarTitleText": "我的",
 				"backgroundColorContent": "#141414"
 			}
 		},

@@ -115,7 +115,7 @@ function pad(n) {
 
   &-text {
     font-size: 28rpx;
-    color: $theme-text-secondary;
+    color: var(--text-secondary);
     margin-top: 16rpx;
   }
 
@@ -163,7 +163,7 @@ function pad(n) {
   .title {
     font-size: 28rpx;
     font-weight: 600;
-    color: $theme-text;
+    color: var(--text-primary);
   }
 
   .episode {
@@ -173,7 +173,7 @@ function pad(n) {
 
   .time {
     font-size: 22rpx;
-    color: $theme-text-secondary;
+    color: var(--text-secondary);
   }
 
   .close {
@@ -190,7 +190,7 @@ function pad(n) {
 
 .clear-btn {
   font-size: 26rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
   padding: 16rpx 48rpx;
   border: 1rpx solid var(--border);
   border-radius: 40rpx;

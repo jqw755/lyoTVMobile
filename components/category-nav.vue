@@ -8,12 +8,6 @@
         :class="{ active: item.type_id === activeId }"
         @tap="$emit('change', item)"
       >
-        <uni-icons
-          v-if="item.type_id === ''"
-          type="home-filled"
-          size="14"
-          color="currentColor"
-        />
         <text style="margin-left: 4rpx">{{ item.type_name }}</text>
       </view>
     </scroll-view>

@@ -143,7 +143,7 @@ function exportApiData(method) {
   &-title {
     font-size: 28rpx;
     font-weight: 600;
-    color: $theme-text;
+    color: var(--text-primary);
   }
 }
 
@@ -152,7 +152,7 @@ function exportApiData(method) {
   width: 44rpx;
   height: 44rpx;
   border-radius: 50%;
-  background: $theme-border;
+  background: var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,7 +177,7 @@ function exportApiData(method) {
 
 .info-hint {
   font-size: 24rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
 }
 
 /* 设置项列表 */
@@ -195,14 +195,14 @@ function exportApiData(method) {
 
   text {
     font-size: 26rpx;
-    color: $theme-text;
+    color: var(--text-primary);
   }
 }
 
 /* 导出调试区 */
 .export-hint {
   font-size: 24rpx;
-  color: $theme-text-secondary;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 

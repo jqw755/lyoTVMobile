@@ -73,7 +73,7 @@ function goDetail(item) {
 
   &-text {
     font-size: 28rpx;
-    color: $theme-text-secondary;
+    color: var(--text-secondary);
     margin-top: 16rpx;
   }
 

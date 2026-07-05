@@ -82,7 +82,7 @@ function callPlugin(method, args = {}, timeout = 15000) {
   })
 }
 
-/** App 启动时自动加载已存储的订阅并获取首页 */
+/** App 启动时只初始化插件和站点（不拉首页，让首页自己处理 loading） */
 export async function initApp() {
   if (!store.subUrl) {
     return
@@ -96,10 +96,7 @@ export async function initApp() {
     } catch (e2) {
       // ignore
     }
-    const homeData = await home()
-    const { updateHome } = await import('@/utils/appState.js')
-    updateHome(homeData)
-    return homeData
+    return initRet
   } catch (e) {
     return null
   }
