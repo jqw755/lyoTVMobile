@@ -114,13 +114,14 @@ function pad(n) {
   gap: 12rpx;
 
   &-text {
-    font-size: 28rpx;
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-wide);
     color: var(--text-secondary);
     margin-top: 16rpx;
   }
 
   &-sub {
-    font-size: 24rpx;
+    font-size: var(--text-sm);
     color: #555;
   }
 }
@@ -161,18 +162,20 @@ function pad(n) {
   }
 
   .title {
-    font-size: 28rpx;
-    font-weight: 600;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
     color: var(--text-primary);
+    line-height: var(--leading-tight);
   }
 
   .episode {
-    font-size: 24rpx;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-normal);
     color: var(--accent);
   }
 
   .time {
-    font-size: 22rpx;
+    font-size: var(--text-xs);
     color: var(--text-secondary);
   }
 
@@ -189,7 +192,7 @@ function pad(n) {
 }
 
 .clear-btn {
-  font-size: 26rpx;
+  font-size: var(--text-base);
   color: var(--text-secondary);
   padding: 16rpx 48rpx;
   border: 1rpx solid var(--border);

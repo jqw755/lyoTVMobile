@@ -6,10 +6,9 @@
 				<uni-icons type="person-filled" size="44" color="#666" />
 			</view>
 			<view class="profile-info">
-				<text class="name">影视爱好者</text>
-				<text class="bio">观看精彩世界</text>
+				<text class="name">乐意欧</text>
+				<text class="bio">观看精彩影视</text>
 			</view>
-			<uni-icons type="gear" size="20" color="#888" class="settings-icon" @tap="goPage('settings')" />
 		</view>
 
 		<!-- 统计卡片（我的收藏 / 观看历史 / 下载） -->
@@ -17,53 +16,50 @@
 			<view class="stat-card" @tap="goPage('favorite')">
 				<text class="stat-count">{{ favCount }}</text>
 				<text class="stat-label">我的收藏</text>
-				<text class="stat-detail">{{ favCount }}部</text>
 			</view>
 			<view class="stat-card" @tap="goPage('history')">
 				<text class="stat-count">{{ historyCount }}</text>
 				<text class="stat-label">观看历史</text>
-				<text class="stat-detail">{{ historyCount }}部</text>
 			</view>
 			<view class="stat-card">
 				<text class="stat-count">0</text>
-				<text class="stat-label">下载</text>
-				<text class="stat-detail">0部</text>
+				<text class="stat-label">我的下载</text>
 			</view>
 		</view>
 
 		<!-- 订阅源设置 -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="link" size="14" color="#888" />
-				<text class="section-title">订阅源设置</text>
+				<uni-icons type="link" size="16" color="#888" />
+				<text class="section-title">订阅源</text>
 			</view>
 			<view class="sub-input">
 				<input v-model="subUrl" placeholder="输入订阅地址（JSON URL）" placeholder-class="placeholder" />
+				<uni-icons v-if="subUrl" type="closeempty" size="16" color="#999" class="sub-clear-icon"
+					@tap="subUrl = ''" />
 				<text class="sub-btn" @tap="submitSub">确定</text>
 			</view>
-			<text v-if="store.subUrl && !subUrl" class="sub-hint">
-				当前订阅源：{{ store.subUrl }}
-			</text>
+			<view v-if="store.subUrl && !subUrl" class="sub-hint">
+				<text class="sub-hint-text">当前订阅源：{{ store.subUrl }}</text>
+				<text class="sub-copy-btn" @tap="copySubUrl">复制</text>
+			</view>
+			<view class="sub-history-link" @tap="goPage('subHistory')">
+				<text class="sub-history-text">历史订阅源</text>
+				<uni-icons type="arrowright" size="16" color="#666" />
+			</view>
 		</view>
 
-		<!-- 图片设置 -->
+		<!-- 首页布局 -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="image" size="14" color="#888" />
-				<text class="section-title">图片设置</text>
+				<uni-icons type="image-filled" size="14" color="#888" />
+				<text class="section-title">首页布局</text>
 			</view>
 			<view class="img-size-options">
-				<text class="img-size-btn" :class="{ active: currentCols === 'large' }" @tap="setImgSize('large')">
-					<text class="img-size-btn-label">大</text>
-					<text class="img-size-btn-cols">3列</text>
-				</text>
-				<text class="img-size-btn" :class="{ active: currentCols === 'medium' }" @tap="setImgSize('medium')">
-					<text class="img-size-btn-label">中</text>
-					<text class="img-size-btn-cols">4列</text>
-				</text>
-				<text class="img-size-btn" :class="{ active: currentCols === 'small' }" @tap="setImgSize('small')">
-					<text class="img-size-btn-label">小</text>
-					<text class="img-size-btn-cols">5列</text>
+				<text class="img-size-btn" v-for="opt in colOptions" :key="opt.value"
+					:class="{ active: currentCols === opt.value }" @tap="setImgSize(opt.value)">
+					<text class="img-size-btn-label">{{ opt.label }}</text>
+					<text class="img-size-btn-cols">一行{{ opt.value }}列</text>
 				</text>
 			</view>
 		</view>
@@ -71,60 +67,59 @@
 		<!-- 显示主题（深色/浅色） -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="circle" size="14" color="#888" />
+				<uni-icons type="color-filled" size="14" color="#888" />
 				<text class="section-title">显示主题</text>
 			</view>
-			<view class="theme-options">
-				<text class="theme-btn" :class="{ active: theme === 'dark' }" @tap="setTheme('dark')">
-					<uni-icons type="moon" size="16" :color="theme === 'dark' ? '#fe8027' : '#888'" />
-					<text class="theme-btn-label">深色</text>
-				</text>
-				<text class="theme-btn" :class="{ active: theme === 'light' }" @tap="setTheme('light')">
-					<uni-icons type="sun-filled" size="16" :color="theme === 'light' ? '#fe8027' : '#888'" />
-					<text class="theme-btn-label">浅色</text>
-				</text>
-			</view>
-		</view>
-
-		<!-- 列表布局 -->
-		<view class="section">
-			<view class="setting-item" @tap="toggleListLayout">
+			<view class="setting-item">
 				<view class="setting-item-left">
-					<uni-icons type="bars" size="16" color="#888" />
-					<text class="setting-item-label">列表布局</text>
+					<text class="setting-item-label">深色模式</text>
 				</view>
-				<switch :checked="listLayout" @change="onListLayoutChange" color="#fe8027" />
+				<switch :checked="theme === 'dark'" @change="onThemeChange" color="#fe8027" />
 			</view>
 		</view>
 
-		<!-- 静音播放 -->
+		<!-- 播放设置 -->
 		<view class="section">
-			<view class="setting-item" @tap="toggleMuted">
+			<view class="section-header">
+				<uni-icons type="videocam-filled" size="14" color="#888" />
+				<text class="section-title">播放设置</text>
+			</view>
+			<view class="setting-item">
 				<view class="setting-item-left">
-					<uni-icons type="sound" size="16" color="#888" />
 					<text class="setting-item-label">静音播放</text>
 				</view>
 				<switch :checked="muted" @change="onMutedChange" color="#fe8027" />
+			</view>
+			<view class="setting-divider" />
+			<view class="setting-item">
+				<view class="setting-item-left">
+					<text class="setting-item-label">长按倍速</text>
+				</view>
+				<view class="speed-picker">
+					<text v-for="opt in speedOptions" :key="opt.value" class="speed-picker-item"
+						:class="{ active: longPressSpeed === opt.value }"
+						@tap="onLongPressSpeedChange(opt.value)">{{ opt.text }}</text>
+				</view>
 			</view>
 		</view>
 
 		<!-- 清除缓存 -->
 		<view class="section">
 			<view class="setting-item" @tap="clearCache">
-				<view class="setting-item-left">
-					<uni-icons type="trash" size="16" color="#888" />
+				<view class="setting-item-left no-indent">
+					<uni-icons type="trash-filled" size="16" color="#888" />
 					<text class="setting-item-label">清除缓存</text>
 				</view>
 				<view class="setting-item-right">
 					<text class="cache-size">{{ cacheSize }}</text>
-					<uni-icons type="arrowright" size="14" color="#555" />
+					<uni-icons type="arrowright" size="16" color="#666" />
 				</view>
 			</view>
 		</view>
 
 		<!-- 关于 -->
 		<view class="about">
-			<text class="version">乐意欧TV v1.0.0</text>
+			<text class="version">乐意欧TV v1.0.8</text>
 		</view>
 	</view>
 </template>
@@ -150,31 +145,68 @@
 		getFavorites,
 		getHistory,
 		getSetting,
-		setSetting
+		setSetting,
+		getSubHistory,
+		addSubHistory,
+		removeSubHistory
 	} from '@/utils/store.js'
 
 	const subUrl = ref('')
-	const currentCols = ref('medium')
+	const colOptions = [{
+			value: 3,
+			label: '大'
+		},
+		{
+			value: 4,
+			label: '中'
+		},
+		{
+			value: 5,
+			label: '小'
+		},
+	]
+	const currentCols = ref(3)
 	const theme = ref('dark')
-	const listLayout = ref(false)
 	const muted = ref(true)
+	const longPressSpeed = ref(2)
+	const speedOptions = [{
+			value: 1.5,
+			text: '1.5x'
+		},
+		{
+			value: 2,
+			text: '2x'
+		},
+		{
+			value: 3,
+			text: '3x'
+		},
+	]
 	const cacheSize = ref('计算中…')
 
 	onMounted(() => {
 		// 图片列数
 		try {
 			const saved = uni.getStorageSync('lyotv_grid_cols')
-			if (saved) currentCols.value = saved
+			if (saved) {
+				// 兼容旧版字符串值（large/medium/small）
+				const map = {
+					large: 3,
+					medium: 4,
+					small: 5
+				}
+				currentCols.value = map[saved] ?? saved
+			}
 		} catch {}
 		// 主题（深色/浅色）
 		try {
 			const saved = uni.getStorageSync('lyotv_theme')
 			if (saved) theme.value = saved
 		} catch {}
-		// 列表布局
-		listLayout.value = getSetting('list_layout', false)
 		// 静音播放
 		muted.value = getSetting('video_muted', true)
+		// 长按倍速
+		longPressSpeed.value = getSetting('long_press_speed', 2)
 		// 缓存大小
 		calcCacheSize()
 	})
@@ -225,37 +257,22 @@
 							}
 						})
 						cacheSize.value = '0 B'
-						uni.showToast({ title: '缓存已清除', icon: 'success' })
+						uni.showToast({
+							title: '缓存已清除',
+							icon: 'success'
+						})
 					} catch (e) {
-						uni.showToast({ title: '清除失败', icon: 'none' })
+						uni.showToast({
+							title: '清除失败',
+							icon: 'none'
+						})
 					}
 				}
 			}
 		})
 	}
 
-	/* ========== 列表布局 ========== */
-	function toggleListLayout() {
-		listLayout.value = !listLayout.value
-		saveListLayout()
-	}
-
-	function onListLayoutChange(e) {
-		listLayout.value = e.detail.value
-		saveListLayout()
-	}
-
-	function saveListLayout() {
-		setSetting('list_layout', listLayout.value)
-		uni.$emit('listLayoutChanged', listLayout.value)
-	}
-
 	/* ========== 静音播放 ========== */
-	function toggleMuted() {
-		muted.value = !muted.value
-		saveMuted()
-	}
-
 	function onMutedChange(e) {
 		muted.value = e.detail.value
 		saveMuted()
@@ -266,20 +283,27 @@
 		uni.$emit('mutedChanged', muted.value)
 	}
 
-	/* ========== 已有功能 ========== */
-	function setTheme(val) {
-		theme.value = val
-		if (typeof uni.$lyotvTheme !== 'undefined') {
-			uni.$lyotvTheme.set(val)
-		} else {
-			try {
-				uni.setStorageSync('lyotv_theme', val)
-			} catch {}
-		}
+	function onLongPressSpeedChange(val) {
+		longPressSpeed.value = val
+		setSetting('long_press_speed', val)
+		uni.$emit('longPressSpeedChanged', val)
 		uni.showToast({
-			title: val === 'dark' ? '深色模式' : '浅色模式',
+			title: `播放器默认长按倍速已设为${val}x`,
 			icon: 'none'
 		})
+	}
+
+	/* ========== 显示主题（深色/浅色） ========== */
+	function onThemeChange(e) {
+		setTheme(e.detail.value ? 'dark' : 'light')
+	}
+
+	function setTheme(val) {
+		theme.value = val
+		try {
+			uni.setStorageSync('lyotv_theme', val)
+		} catch {}
+		uni.$emit('themeChange', val)
 	}
 
 	function setImgSize(cols) {
@@ -288,36 +312,47 @@
 			uni.setStorageSync('lyotv_grid_cols', cols)
 		} catch {}
 		uni.$emit('gridColsChanged', cols)
-		uni.showToast({
-			title: cols === 'large' ? '3列' : cols === 'medium' ? '4列' : '5列',
-			icon: 'none'
-		})
 	}
 
 	async function submitSub() {
 		const url = subUrl.value.trim()
 		if (!url) return
 		try {
-			uni.showLoading({ title: '加载订阅...' })
+			uni.showLoading({
+				title: '加载订阅...'
+			})
 			await apiInit(url)
+			addSubHistory(url)
 			setSubUrl(url)
 			try {
 				const siteData = await getSites()
 				updateSites(siteData)
-			} catch (e2) { /* ignore */ }
+			} catch (e2) {
+				/* ignore */
+			}
 			const data = await home()
 			updateHome(data)
 			uni.$emit('subUpdated')
 			uni.hideLoading()
-			uni.showToast({ title: '订阅成功', icon: 'success' })
+			uni.showToast({
+				title: '订阅成功',
+				icon: 'success'
+			})
 			subUrl.value = ''
 		} catch (e) {
 			uni.hideLoading()
 			const msg = e && e.message ? e.message : '订阅加载失败'
 			if (msg.length > 20) {
-				uni.showModal({ title: '订阅失败', content: msg, showCancel: false })
+				uni.showModal({
+					title: '订阅失败',
+					content: msg,
+					showCancel: false
+				})
 			} else {
-				uni.showToast({ title: msg, icon: 'none' })
+				uni.showToast({
+					title: msg,
+					icon: 'none'
+				})
 			}
 		}
 	}
@@ -325,15 +360,35 @@
 	function goPage(page) {
 		switch (page) {
 			case 'favorite':
-				uni.navigateTo({ url: '/pages/favorite/favorite' })
+				uni.navigateTo({
+					url: '/pages/favorite/favorite'
+				})
 				break
 			case 'history':
-				uni.navigateTo({ url: '/pages/history/history' })
+				uni.navigateTo({
+					url: '/pages/history/history'
+				})
 				break
-			case 'settings':
-				uni.navigateTo({ url: '/pages/settings/settings' })
+			case 'subHistory':
+				uni.navigateTo({
+					url: '/pages/sub-history/sub-history'
+				})
 				break
 		}
+	}
+
+	function copySubUrl() {
+		const url = store.subUrl
+		if (!url) return
+		uni.setClipboardData({
+			data: url,
+			success: () => {
+				uni.showToast({
+					title: '已复制订阅地址',
+					icon: 'success'
+				})
+			}
+		})
 	}
 </script>
 
@@ -348,90 +403,87 @@
 	.profile {
 		display: flex;
 		align-items: center;
-		padding: 40rpx 24rpx 24rpx;
+		padding: 50rpx 24rpx 28rpx;
 		gap: 16rpx;
 
 		.avatar {
-		  width: 100rpx;
-		  height: 100rpx;
-		  border-radius: 50%;
-		  background: var(--card);
-		  display: flex;
-		  align-items: center;
-		  justify-content: center;
-		  flex-shrink: 0;
-		 }
-
-		.profile-info {
-		 flex: 1;
-		 display: flex;
-		 flex-direction: column;
-		 gap: 4rpx;
-
-		 .name {
-		  font-size: 32rpx;
-		  font-weight: 600;
-		  color: var(--text-primary);
-		 }
-
-		 .bio {
-		  font-size: 22rpx;
-		  color: var(--text-secondary);
-		 }
+			width: 100rpx;
+			height: 100rpx;
+			border-radius: 50%;
+			background: var(--card);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
 		}
 
-		.settings-icon {
-			padding: 8rpx;
+		.profile-info {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			gap: 4rpx;
+
+			.name {
+				font-size: 32rpx;
+				font-weight: 600;
+				color: var(--text-primary);
+			}
+
+			.bio {
+				font-size: 22rpx;
+				color: var(--text-secondary);
+			}
 		}
 	}
 
 	/* ========== 统计卡片 ========== */
-.stats-row {
-	display: flex;
-	gap: 12rpx;
-	margin: 0 20rpx 20rpx;
-}
-
-.stat-card {
-	flex: 1;
-	background: var(--card);
-	border-radius: 16rpx;
-	padding: 20rpx 0;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 4rpx;
-
-	&:active {
-	 opacity: 0.7;
+	.stats-row {
+		display: flex;
+		gap: 12rpx;
+		margin: 0 20rpx 26rpx;
 	}
 
-	.stat-count {
-	 font-size: 36rpx;
-	 font-weight: 700;
-	 color: var(--text-primary);
-	}
+	.stat-card {
+		flex: 1;
+		background: var(--card);
+		border-radius: 16rpx;
+		padding: 20rpx 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4rpx;
 
-	.stat-label {
-	 font-size: 22rpx;
-	 color: var(--text-secondary);
-	}
+		&:active {
+			opacity: 0.7;
+		}
 
-	.stat-detail {
-	 font-size: 18rpx;
-	 color: #555;
-	 margin-top: 2rpx;
+		.stat-count {
+			font-size: var(--text-xl);
+			font-weight: var(--weight-bold);
+			color: var(--text-primary);
+		}
+
+		.stat-label {
+			font-size: var(--text-xs);
+			color: var(--text-secondary);
+		}
+
+		.stat-detail {
+			font-size: 18rpx;
+			color: #555;
+			margin-top: 2rpx;
+		}
 	}
-}
 
 	/* ========== 公共区块 ========== */
 	.section {
-		margin: 0 20rpx 16rpx;
+		margin: 0 20rpx 20rpx;
 		background: var(--card);
 		border-radius: 16rpx;
-		padding: 20rpx;
+		padding: 28rpx;
 
 		&-header {
+			--icon-size: 14rpx;
 			display: flex;
 			align-items: center;
 			gap: 8rpx;
@@ -439,9 +491,9 @@
 		}
 
 		&-title {
-		  font-size: 24rpx;
-		  color: var(--text-secondary);
-		 }
+			font-size: var(--text-sm);
+			color: var(--text-secondary);
+		}
 	}
 
 	/* ========== 设置项 ========== */
@@ -454,10 +506,16 @@
 			display: flex;
 			align-items: center;
 			gap: 10rpx;
+			padding-left: calc(var(--icon-size, 14rpx) + 8rpx);
+
+			&.no-indent {
+				padding-left: 0;
+			}
 		}
 
 		&-label {
-			font-size: 26rpx;
+			font-size: var(--text-base);
+			font-weight: var(--weight-medium);
 			color: var(--text-primary);
 		}
 
@@ -468,27 +526,70 @@
 		}
 	}
 
+	/* 设置项分割线 */
+	.setting-divider {
+		height: 1rpx;
+		background: var(--border);
+		margin: 16rpx 0;
+	}
+
+	/* 长按倍速选项 */
+	.speed-picker {
+		display: flex;
+		gap: 6rpx;
+		flex-shrink: 0;
+	}
+
+	.speed-picker-item {
+		padding: 6rpx 16rpx;
+		border-radius: 8rpx;
+		background: var(--card-hover);
+		font-size: 24rpx;
+		color: var(--text-secondary);
+		text-align: center;
+		line-height: 1.6;
+
+		&.active {
+			background: $theme-accent;
+			color: #fff;
+			font-weight: 600;
+		}
+
+		&:active {
+			opacity: 0.7;
+		}
+	}
+
 	/* ========== 订阅源输入 ========== */
 	.sub-input {
 		display: flex;
 		gap: 12rpx;
+		margin-top: 22rpx;
 
 		input {
-		 flex: 1;
-		 background: var(--bg-primary);
-		 border-radius: 12rpx;
-		 padding: 16rpx 20rpx;
-		 font-size: 24rpx;
-		 color: var(--text-primary);
+			flex: 1;
+			background: var(--bg-primary);
+			border-radius: 12rpx;
+			padding: 16rpx 20rpx;
+			font-size: 24rpx;
+			color: var(--text-primary);
+			border: 1px solid var(--text-secondary);
+		}
+
+		.sub-clear-icon {
+			margin-left: -90rpx;
+			align-self: center;
+			z-index: 1;
+			padding: 8rpx 24rpx;
 		}
 
 		.placeholder {
-		 color: var(--text-secondary);
-		 font-size: 24rpx;
+			color: var(--text-secondary);
+			font-size: 24rpx;
 		}
 
 		.sub-btn {
-		 background: $theme-accent;
+			background: $theme-accent;
 			color: #fff;
 			border-radius: 12rpx;
 			padding: 0 28rpx;
@@ -499,11 +600,47 @@
 	}
 
 	.sub-hint {
-		display: block;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 		font-size: 20rpx;
 		color: var(--text-secondary);
 		margin-top: 10rpx;
-		word-break: break-all;
+		gap: 12rpx;
+
+		&-text {
+			flex: 1;
+			word-break: break-all;
+		}
+	}
+
+	.sub-copy-btn {
+		flex-shrink: 0;
+		font-size: 22rpx;
+		color: $theme-accent;
+		padding: 4rpx 8rpx;
+
+		&:active {
+			opacity: 0.6;
+		}
+	}
+
+	.sub-history-link {
+		display: flex;
+		align-items: center;
+		gap: 8rpx;
+		margin-top: 22rpx;
+		padding: 12rpx calc(var(--icon-size, 14rpx) + 8rpx);
+
+		&:active {
+			opacity: 0.6;
+		}
+
+		.sub-history-text {
+			flex: 1;
+			font-size: var(--text-base);
+			color: var(--text-primary);
+		}
 	}
 
 	/* ========== 图片大小选择 ========== */
@@ -525,7 +662,7 @@
 
 		&.active {
 			background: rgba($theme-accent, 0.12);
-			outline: 2rpx solid $theme-accent;
+			border: 2rpx solid $theme-accent;
 		}
 
 		&:active {
@@ -533,51 +670,18 @@
 		}
 
 		&-label {
-		 font-size: 28rpx;
-		 font-weight: 600;
-		 color: var(--text-primary);
+			font-size: 28rpx;
+			font-weight: 600;
+			color: var(--text-primary);
 
-		 .active & {
-		  color: $theme-accent;
-		 }
+			.active & {
+				color: $theme-accent;
+			}
 		}
 
 		&-cols {
-		 font-size: 20rpx;
-		 color: var(--text-secondary);
-		}
-	}
-
-	/* ========== 显示主题（深色/浅色） ========== */
-	.theme-options {
-		display: flex;
-		gap: 12rpx;
-	}
-
-	.theme-btn {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8rpx;
-		padding: 18rpx 0;
-		border-radius: 12rpx;
-		background: var(--bg-primary);
-		transition: all 0.2s;
-
-		&.active {
-			outline: 2rpx solid $theme-accent;
-			background: rgba($theme-accent, 0.08);
-		}
-
-		&:active {
-			opacity: 0.7;
-		}
-
-		&-label {
-			font-size: 26rpx;
-			color: var(--text-primary);
-			font-weight: 500;
+			font-size: 20rpx;
+			color: var(--text-secondary);
 		}
 	}
 

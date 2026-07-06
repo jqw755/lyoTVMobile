@@ -1,19 +1,14 @@
 <template>
 	<view class="page">
 		<!-- 顶部自定义导航栏 -->
-		<view class="nav-header" :style="{ paddingTop: statusBarHeight + 'px' }">
-			<view class="nav-bar">
-				<view class="nav-back" @tap="goBack">
-					<uni-icons type="arrowleft" size="22" color="#f0f0f0" />
-				</view>
-				<view class="nav-search">
-					<uni-icons type="search" size="18" color="#888" />
-					<input v-model="keyword" placeholder="搜索影片、演员、导演" placeholder-class="nav-placeholder"
-						confirm-type="search" @confirm="doSearch" />
-					<text v-if="keyword" class="nav-clear" @tap="keyword = ''">✕</text>
-				</view>
-				<text class="nav-btn" @tap="doSearch">搜索</text>
+		<view class="nav-bar">
+			<view class="nav-search">
+				<uni-icons type="search" size="18" color="#888" />
+				<input v-model="keyword" placeholder="搜索影片" maxlength="20" placeholder-class="nav-placeholder"
+					confirm-type="search" @confirm="doSearch" />
+				<text v-if="keyword" class="nav-clear" @tap="clearKeyword">✕</text>
 			</view>
+			<text class="nav-btn" @tap="doSearch">搜索</text>
 		</view>
 
 		<!-- 搜索前：热门搜索 + 历史 -->
@@ -32,16 +27,12 @@
 						</view>
 					</view>
 					<view class="history-list">
-						<view class="history-item" v-for="(tag, i) in historyTags" :key="i"
-							@tap="editing ? null : tapTag(tag)">
-							<view class="history-icon">
-								<view class="history-dot" />
-							</view>
-							<text class="history-text">{{ tag }}</text>
-							<text v-if="editing" class="history-del" @tap.stop="removeHistoryItem(i)">
-								<uni-icons type="closeempty" size="16" color="#999" />
+						<view class="history-tag" v-for="(tag, i) in historyTags" :key="i"
+							@tap="editing ? removeHistoryItem(i) : tapTag(tag)">
+							<text class="history-tag-text">{{ tag }}</text>
+							<text v-if="editing" class="history-tag-del">
+								<uni-icons type="closeempty" size="14" color="#999" />
 							</text>
-							<uni-icons v-else type="arrowright" size="14" color="#555" />
 						</view>
 					</view>
 				</view>
@@ -101,7 +92,8 @@
 	import {
 		ref,
 		computed,
-		onMounted
+		onMounted,
+		watch
 	} from 'vue'
 	import {
 		searchSite
@@ -116,7 +108,6 @@
 	const keyword = ref('')
 	const searched = ref(false)
 	const historyTags = ref([])
-	const statusBarHeight = ref(0)
 	const editing = ref(false)
 	const hotTags = ref([])
 
@@ -174,14 +165,6 @@
 	})
 
 	onMounted(() => {
-		// 获取状态栏高度
-		try {
-			const sys = uni.getSystemInfoSync()
-			statusBarHeight.value = sys.statusBarHeight || 0
-		} catch {
-			statusBarHeight.value = 24
-		}
-
 		// 加载搜索历史
 		try {
 			historyTags.value = uni.getStorageSync('lyotv_search_history') || []
@@ -205,10 +188,6 @@
 			if (page?.$page?.options?.keyword) return decodeURIComponent(page.$page.options.keyword)
 		} catch {}
 		return ''
-	}
-
-	function goBack() {
-		uni.navigateBack()
 	}
 
 	function saveHistory(kw) {
@@ -269,6 +248,16 @@
 		})
 	}
 
+	function clearKeyword() {
+		keyword.value = ''
+		searched.value = false
+	}
+
+	// 手动清空输入内容时恢复初始状态
+	watch(keyword, (val) => {
+		if (!val) searched.value = false
+	})
+
 	function selectSite(key) {
 		currentKey.value = key
 	}
@@ -290,30 +279,11 @@
 	}
 
 	/* ========== 顶栏 ========== */
-	.nav-header {
-		flex-shrink: 0;
-		background: var(--bg-primary);
-		padding-bottom: 12rpx;
-	}
-
 	.nav-bar {
 		display: flex;
 		align-items: center;
 		gap: 12rpx;
-		padding: 0 16rpx;
-	}
-
-	.nav-back {
-		width: 56rpx;
-		height: 56rpx;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-
-		&:active {
-			opacity: 0.6;
-		}
+		padding: 30rpx 16rpx;
 	}
 
 	.nav-search {
@@ -323,7 +293,7 @@
 		gap: 10rpx;
 		background: var(--card);
 		border-radius: 40rpx;
-		padding: 0 20rpx;
+		padding: 4rpx 20rpx;
 		height: 64rpx;
 
 		input {
@@ -340,7 +310,8 @@
 		.nav-clear {
 			color: var(--text-secondary);
 			font-size: 26rpx;
-			padding: 0 4rpx;
+			padding: 0 8rpx;
+			font-weight: bolder;
 		}
 	}
 
@@ -368,8 +339,8 @@
 	}
 
 	.section-title {
-		font-size: 28rpx;
-		font-weight: 700;
+		font-size: var(--text-lg);
+		font-weight: var(--weight-semibold);
 		color: var(--text-primary);
 		display: block;
 		margin-bottom: 16rpx;
@@ -395,7 +366,7 @@
 
 	/* ========== 搜索历史 ========== */
 	.history-section {
-		padding: 28rpx 20rpx 0;
+		padding: 0 20rpx 30rpx;
 	}
 
 	.history-header {
@@ -440,54 +411,36 @@
 
 	.history-list {
 		display: flex;
-		flex-direction: column;
+		flex-wrap: wrap;
+		gap: 12rpx;
 	}
 
-	.history-item {
-		display: flex;
+	.history-tag {
+		position: relative;
+		background: var(--card);
+		padding: 10rpx 24rpx;
+		border-radius: 30rpx;
+		display: inline-flex;
 		align-items: center;
-		gap: 16rpx;
-		padding: 16rpx 0;
-		border-bottom: 1rpx solid var(--border);
-
-		&:last-child {
-			border-bottom: none;
-		}
+		gap: 6rpx;
 
 		&:active {
 			opacity: 0.7;
 		}
 
-		.history-icon {
-			width: 36rpx;
-			height: 36rpx;
-			border-radius: 50%;
-			background: var(--card);
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			flex-shrink: 0;
-
-			.history-dot {
-				width: 8rpx;
-				height: 8rpx;
-				border-radius: 50%;
-				background: var(--text-secondary);
-			}
-		}
-
-		.history-text {
-			flex: 1;
-			font-size: 26rpx;
+		.history-tag-text {
+			font-size: 24rpx;
 			color: var(--text-primary);
 		}
 
-		.history-del {
-			padding: 8rpx;
-
-			&:active {
-				opacity: 0.6;
-			}
+		.history-tag-del {
+			width: 28rpx;
+			height: 28rpx;
+			border-radius: 50%;
+			background: var(--card-hover);
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 	}
 
@@ -628,17 +581,18 @@
 			}
 
 			.title {
-				font-size: 28rpx;
-				font-weight: 600;
+				font-size: var(--text-lg);
+				font-weight: var(--weight-semibold);
 				color: var(--text-primary);
 				display: block;
-				line-height: 1.3;
+				line-height: var(--leading-tight);
 				margin-bottom: 6rpx;
 			}
 
 			.remark {
 				display: inline-block;
-				font-size: 22rpx;
+				font-size: var(--text-sm);
+				letter-spacing: var(--tracking-normal);
 				color: var(--accent);
 				background: rgba(254, 128, 39, 0.1);
 				padding: 2rpx 12rpx;

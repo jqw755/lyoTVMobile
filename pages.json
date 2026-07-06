@@ -14,23 +14,21 @@
 	"pages": [{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "乐意欧TV",
-				"enablePullDownRefresh": true,
+				"navigationStyle": "custom",
 				"backgroundColorContent": "#141414"
 			}
 		},
 		{
-		  "path": "pages/search/search",
-		  "style": {
-		   "navigationBarTitleText": "搜索",
-		   "navigationStyle": "custom",
-		   "backgroundColorContent": "#141414"
-		  }
-		 },
+			"path": "pages/search/search",
+			"style": {
+				"navigationBarTitleText": "搜索",
+				"backgroundColorContent": "#141414"
+			}
+		},
 		{
 			"path": "pages/detail/detail",
 			"style": {
-				"navigationBarTitleText": "详情",
+				"navigationStyle": "custom",
 				"backgroundColorContent": "#141414"
 			}
 		},
@@ -53,14 +51,14 @@
 		{
 			"path": "pages/mine/mine",
 			"style": {
-				"navigationBarTitleText": "我的",
+				"navigationStyle": "custom",
 				"backgroundColorContent": "#141414"
 			}
 		},
 		{
-			"path": "pages/settings/settings",
+			"path": "pages/sub-history/sub-history",
 			"style": {
-				"navigationBarTitleText": "设置",
+				"navigationBarTitleText": "历史订阅源",
 				"backgroundColorContent": "#141414"
 			}
 		}
