@@ -246,44 +246,45 @@
 	});
 
 	async function loadDetail() {
-	 if (!pageId) return;
-	 loading.value = true;
-	 error.value = false;
-	 errorMsg.value = "";
-	 try {
-	  const data = await detail(pageId, pageKey);
-	  const item = data.list?.[0] || data.vod;
-	  if (!item || !item.vod_name) {
-	   error.value = true;
-	   errorMsg.value = "未获取到影片信息";
-	   return;
-	  }
-	  vod.value = item;
-	  uni.setNavigationBarTitle({
-	   title: item.vod_name
-	  });
-	  if (!vod.value.site_key && pageKey) vod.value.site_key = pageKey;
-	  flags.value = item?.vodFlags || [];
-	  if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
-	  isFaved.value = isFavorite(pageId);
-	  const hist = getHistory().find((h) => h.vod_id === item.vod_id);
-	  if (hist) {
-	   savedEpisode.value = hist.episode || "";
-	   savedProgress.value = hist.progress || 0;
-	   if (savedEpisode.value && currentEpisodes.value.length > 0) {
-	    const idx = currentEpisodes.value.findIndex(
-	     (ep) => ep.name === savedEpisode.value,
-	    );
-	    if (idx >= 0) currentIndex.value = idx;
+	  if (!pageId) return;
+	  loading.value = true;
+	  error.value = false;
+	  errorMsg.value = "";
+	  try {
+	   const data = await detail(pageId, pageKey);
+	   const item = data.list?.[0] || data.vod;
+	   if (!item || !item.vod_name) {
+	    error.value = true;
+	    errorMsg.value = "未获取到影片信息";
+	    return;
 	   }
+	   vod.value = item;
+	   uni.setNavigationBarTitle({
+	    title: item.vod_name
+	   });
+	   if (!vod.value.site_key && pageKey) vod.value.site_key = pageKey;
+	   flags.value = item?.vodFlags || [];
+	   if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
+	   isFaved.value = await isFavorite(pageId);
+	   const hist = await getHistory();
+	   const found = hist.find((h) => h.vod_id === item.vod_id);
+	   if (found) {
+	    savedEpisode.value = found.episode || "";
+	    savedProgress.value = found.progress || 0;
+	    if (savedEpisode.value && currentEpisodes.value.length > 0) {
+	     const idx = currentEpisodes.value.findIndex(
+	      (ep) => ep.name === savedEpisode.value,
+	     );
+	     if (idx >= 0) currentIndex.value = idx;
+	    }
+	   }
+	  } catch (e) {
+	   error.value = true;
+	   errorMsg.value = e?.message || "请求异常";
+	  } finally {
+	   loading.value = false;
 	  }
-	 } catch (e) {
-	  error.value = true;
-	  errorMsg.value = e?.message || "请求异常";
-	 } finally {
-	  loading.value = false;
 	 }
-	}
 
 	function extractUrl(u) {
 		let r = "";
@@ -328,15 +329,15 @@
 	}
 
 	function playEpisode(index) {
-		const ep = currentEpisodes.value[index];
-		if (!ep) return;
-		currentIndex.value = index;
-		showAll.value = true;
-		addHistory(vod.value, ep.name, 0);
-		videoErrorMsg.value = "";
-		switchingSource.value = false;
-		loadVideoSource(activeFlag.value, ep);
-	}
+	  const ep = currentEpisodes.value[index];
+	  if (!ep) return;
+	  currentIndex.value = index;
+	  showAll.value = true;
+	  addHistory(vod.value, ep.name, 0);
+	  videoErrorMsg.value = "";
+	  switchingSource.value = false;
+	  loadVideoSource(activeFlag.value, ep);
+	 }
 
 	function loadVideoSource(flag, ep, isFallback) {
 		player(flag, ep.url, pageKey)
@@ -511,23 +512,23 @@
 	 showLongPressHint.value = false;
 	}
 
-	function toggleFav() {
-		if (isFaved.value) {
-			removeFavorite(vod.value.vod_id);
-			isFaved.value = false;
-			uni.showToast({
-				title: "已取消收藏",
-				icon: "none"
-			});
-		} else {
-			addFavorite(vod.value);
-			isFaved.value = true;
-			uni.showToast({
-				title: "已收藏",
-				icon: "success"
-			});
-		}
-	}
+	async function toggleFav() {
+	  if (isFaved.value) {
+	   await removeFavorite(vod.value.vod_id);
+	   isFaved.value = false;
+	   uni.showToast({
+	    title: "已取消收藏",
+	    icon: "none"
+	   });
+	  } else {
+	   await addFavorite(vod.value);
+	   isFaved.value = true;
+	   uni.showToast({
+	    title: "已收藏",
+	    icon: "success"
+	   });
+	  }
+	 }
 
 	function stripHtml(html) {
 		if (!html) return ''

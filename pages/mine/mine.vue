@@ -1,17 +1,57 @@
 <template>
 	<view class="page">
 		<!-- 用户头部 -->
-		<view class="profile">
-			<view class="avatar">
-				<uni-icons type="person-filled" size="44" color="#666" />
-			</view>
-			<view class="profile-info">
-				<text class="name">乐意欧</text>
-				<text class="bio">观看精彩影视</text>
-			</view>
-		</view>
+		  <view class="profile">
+		   <view class="avatar" @tap="loggedIn ? showAvatarPicker = true : onProfileTap()">
+		    <text class="avatar-emoji">{{ displayAvatar }}</text>
+		   </view>
+		   <view class="profile-info" @tap="loggedIn ? openProfileEditor() : onProfileTap()">
+		    <text class="name">{{ loggedIn ? (profile?.nickname || '用户') : '点击登录' }}</text>
+		    <text class="bio">{{ loggedIn ? bioText : '登录后同步收藏和历史到云端' }}</text>
+		   </view>
+		   <view class="profile-arrow" v-if="loggedIn" @tap="openProfileEditor()">
+		    <uni-icons type="arrowright" size="16" color="#555" />
+		   </view>
+		  </view>
 
-		<!-- 统计卡片（我的收藏 / 观看历史 / 下载） -->
+		  <!-- 头像选择弹窗 -->
+		  <view class="avatar-overlay" v-if="showAvatarPicker" @tap.self="showAvatarPicker = false">
+		   <view class="avatar-picker">
+		    <view class="picker-header">
+		     <text class="picker-title">选择头像</text>
+		     <text class="picker-close" @tap="showAvatarPicker = false">✕</text>
+		    </view>
+		    <view class="picker-grid">
+		     <view v-for="a in ANIMAL_AVATARS" :key="a" class="picker-item"
+		      :class="{ active: selectedAvatar === a }" @tap="selectAvatar(a)">
+		      <text class="picker-emoji">{{ a }}</text>
+		     </view>
+		    </view>
+		   </view>
+		  </view>
+
+		  <!-- 个人资料编辑弹窗 -->
+		  <view class="avatar-overlay" v-if="showProfileEditor" @tap.self="closeProfileEditor">
+		   <view class="profile-editor">
+		    <view class="picker-header">
+		     <text class="picker-title">编辑资料</text>
+		     <text class="picker-close" @tap="closeProfileEditor">✕</text>
+		    </view>
+		    <view class="editor-form">
+		     <view class="editor-field">
+		      <text class="editor-label">昵称</text>
+		      <input class="editor-input" v-model="editNickname" placeholder="输入昵称" maxlength="20" />
+		     </view>
+		     <view class="editor-field">
+		      <text class="editor-label">简介</text>
+		      <input class="editor-input" v-model="editBio" placeholder="一句话介绍自己" maxlength="50" />
+		     </view>
+		     <text class="editor-btn" @tap="saveProfile">保存</text>
+		    </view>
+		   </view>
+		  </view>
+
+		  <!-- 统计卡片（我的收藏 / 观看历史 / 下载） -->
 		<view class="stats-row">
 			<view class="stat-card" @tap="goPage('favorite')">
 				<text class="stat-count">{{ favCount }}</text>
@@ -142,13 +182,17 @@
 		getSites
 	} from '@/utils/api.js'
 	import {
-		getFavorites,
-		getHistory,
-		getSetting,
-		setSetting,
-		getSubHistory,
-		addSubHistory,
-		removeSubHistory
+	 getFavorites,
+	 getHistory,
+	 getSetting,
+	 setSetting,
+	 getSubHistory,
+	 addSubHistory,
+	 removeSubHistory,
+	 getCurrentUser,
+	 getProfile,
+	 updateProfile,
+	 logout as cloudLogout,
 	} from '@/utils/store.js'
 
 	const subUrl = ref('')
@@ -184,36 +228,157 @@
 	]
 	const cacheSize = ref('计算中…')
 
-	onMounted(() => {
-		// 图片列数
-		try {
-			const saved = uni.getStorageSync('lyotv_grid_cols')
-			if (saved) {
-				// 兼容旧版字符串值（large/medium/small）
-				const map = {
-					large: 3,
-					medium: 4,
-					small: 5
-				}
-				currentCols.value = map[saved] ?? saved
-			}
-		} catch {}
-		// 主题（深色/浅色）
-		try {
-			const saved = uni.getStorageSync('lyotv_theme')
-			if (saved) theme.value = saved
-		} catch {}
-		// 静音播放
-		muted.value = getSetting('video_muted', true)
-		// 长按倍速
-		longPressSpeed.value = getSetting('long_press_speed', 2)
-		// 缓存大小
-		calcCacheSize()
+	// ===== 头像 =====
+	const ANIMAL_AVATARS = ['🐱', '🐶', '🐰', '🐼', '🦊', '🐯', '🦁', '🐸', '🐵', '🦄', '🐷', '🐨', '🐲', '🦋', '🐙', '🦉', '🐧', '🐭', '🐮', '🐻']
+	const showAvatarPicker = ref(false)
+	const selectedAvatar = ref('')
+
+	const displayAvatar = computed(() => {
+		return selectedAvatar.value || profile.value?.avatar_url || '🐱'
 	})
 
-	/* ========== 统计数据 ========== */
-	const favCount = computed(() => getFavorites().length)
-	const historyCount = computed(() => getHistory().length)
+	// ===== 个人资料 =====
+	const showProfileEditor = ref(false)
+	const editNickname = ref('')
+	const editBio = ref('')
+
+	const bioText = computed(() => {
+		return profile.value?.preferences?.bio || '观看精彩影视'
+	})
+
+	// ===== 用户登录态 =====
+	const loggedIn = ref(false)
+	const profile = ref(null)
+	const favCount = ref(0)
+	const historyCount = ref(0)
+
+	async function loadUserState() {
+	  const user = getCurrentUser()
+	  loggedIn.value = !!user
+	  if (user) {
+	   profile.value = getProfile()
+	   selectedAvatar.value = profile.value?.avatar_url || ''
+	  }
+	  await refreshCounts()
+	 }
+
+	async function refreshCounts() {
+		try {
+			const favs = await getFavorites()
+			favCount.value = favs.length
+		} catch {
+			favCount.value = 0
+		}
+		try {
+			const hist = await getHistory()
+			historyCount.value = hist.length
+		} catch {
+			historyCount.value = 0
+		}
+	}
+
+	function onProfileTap() {
+		if (!loggedIn.value) {
+			uni.navigateTo({
+				url: '/pages/login/login'
+			})
+		} else {
+			uni.showActionSheet({
+				itemList: ['退出登录'],
+				success: (res) => {
+					if (res.tapIndex === 0) doLogout()
+				}
+			})
+		}
+	}
+
+	async function doLogout() {
+	  try {
+	   await cloudLogout()
+	   loggedIn.value = false
+	   profile.value = null
+	   selectedAvatar.value = ''
+	   favCount.value = 0
+	   historyCount.value = 0
+	   uni.showToast({
+	    title: '已退出',
+	    icon: 'success'
+	   })
+	  } catch (e) {
+	   uni.showToast({
+	    title: '退出失败',
+	    icon: 'none'
+	   })
+	  }
+	 }
+
+	 async function selectAvatar(emoji) {
+	  try {
+	   await updateProfile({ avatar_url: emoji })
+	   selectedAvatar.value = emoji
+	   showAvatarPicker.value = false
+	   uni.showToast({ title: '头像已更换', icon: 'success' })
+	  } catch (e) {
+	   uni.showToast({ title: '保存失败', icon: 'none' })
+	  }
+	 }
+
+	 // ===== 个人资料编辑 =====
+	 function openProfileEditor() {
+	  editNickname.value = profile.value?.nickname || ''
+	  editBio.value = profile.value?.preferences?.bio || ''
+	  showProfileEditor.value = true
+	 }
+
+	 function closeProfileEditor() {
+	  showProfileEditor.value = false
+	 }
+
+	 async function saveProfile() {
+	  const nickname = editNickname.value.trim()
+	  const bio = editBio.value.trim()
+	  if (!nickname) {
+	   uni.showToast({ title: '昵称不能为空', icon: 'none' })
+	   return
+	  }
+	  try {
+	   await updateProfile({
+	    nickname,
+	    preferences: { ...(profile.value?.preferences || {}), bio }
+	   })
+	   // 更新本地 profile
+	   if (profile.value) {
+	    profile.value = { ...profile.value, nickname, preferences: { ...(profile.value.preferences || {}), bio } }
+	   }
+	   showProfileEditor.value = false
+	   uni.showToast({ title: '资料已保存', icon: 'success' })
+	  } catch (e) {
+	   uni.showToast({ title: '保存失败', icon: 'none' })
+	  }
+	 }
+
+	onMounted(() => {
+	 // 图片列数（从云端偏好读取）
+	 currentCols.value = getSetting('grid_cols', 3)
+	 // 主题（从云端偏好读取）
+	 theme.value = getSetting('theme', 'dark')
+	 // 静音播放
+	 muted.value = getSetting('video_muted', true)
+	 // 长按倍速
+	 longPressSpeed.value = getSetting('long_press_speed', 2)
+		// 缓存大小
+		calcCacheSize()
+		// 加载用户状态
+		loadUserState()
+	})
+
+	// 每次切到 tab 都刷新
+	import {
+		onShow
+	} from '@dcloudio/uni-app'
+	onShow(() => {
+		loadUserState()
+	})
 
 	/* ========== 缓存计算 ========== */
 	function calcCacheSize() {
@@ -246,10 +411,10 @@
 			success: (res) => {
 				if (res.confirm) {
 					try {
-						// 保留收藏、历史、设置等关键数据
-						const keep = ['lyotv_favorites', 'lyotv_history', 'lyotv_settings',
-							'lyotv_sub_url', 'lyotv_theme', 'lyotv_theme_color', 'lyotv_grid_cols'
-						]
+					 // 保留收藏/历史缓存（加速用）和订阅源相关
+					 const keep = ['lyotv_favorites', 'lyotv_history',
+					  'lyotv_sub_url', 'lyotv_sub_history'
+					 ]
 						const keys = uni.getStorageInfoSync().keys || []
 						keys.forEach(k => {
 							if (!keep.includes(k)) {
@@ -299,20 +464,16 @@
 	}
 
 	function setTheme(val) {
-		theme.value = val
-		try {
-			uni.setStorageSync('lyotv_theme', val)
-		} catch {}
-		uni.$emit('themeChange', val)
-	}
+	  theme.value = val
+	  setSetting('theme', val)
+	  uni.$emit('themeChange', val)
+	 }
 
-	function setImgSize(cols) {
-		currentCols.value = cols
-		try {
-			uni.setStorageSync('lyotv_grid_cols', cols)
-		} catch {}
-		uni.$emit('gridColsChanged', cols)
-	}
+	 function setImgSize(cols) {
+	  currentCols.value = cols
+	  setSetting('grid_cols', cols)
+	  uni.$emit('gridColsChanged', cols)
+	 }
 
 	async function submitSub() {
 		const url = subUrl.value.trim()
@@ -407,15 +568,20 @@
 		gap: 16rpx;
 
 		.avatar {
-			width: 100rpx;
-			height: 100rpx;
-			border-radius: 50%;
-			background: var(--card);
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			flex-shrink: 0;
-		}
+		  width: 100rpx;
+		  height: 100rpx;
+		  border-radius: 50%;
+		  background: var(--card);
+		  display: flex;
+		  align-items: center;
+		  justify-content: center;
+		  flex-shrink: 0;
+
+		  .avatar-emoji {
+		   font-size: 52rpx;
+		   line-height: 1;
+		  }
+		 }
 
 		.profile-info {
 			flex: 1;
@@ -434,9 +600,137 @@
 				color: var(--text-secondary);
 			}
 		}
-	}
+		}
 
-	/* ========== 统计卡片 ========== */
+		/* ========== 头像选择弹窗 ========== */
+		.avatar-overlay {
+		 position: fixed;
+		 top: 0;
+		 left: 0;
+		 right: 0;
+		 bottom: 0;
+		 background: rgba(0, 0, 0, 0.5);
+		 z-index: 1000;
+		 display: flex;
+		 align-items: center;
+		 justify-content: center;
+		}
+
+		.avatar-picker {
+		 background: var(--card);
+		 border-radius: 24rpx;
+		 padding: 32rpx;
+		 width: 560rpx;
+		 max-height: 70vh;
+		 overflow-y: auto;
+		}
+
+		.picker-header {
+		 display: flex;
+		 align-items: center;
+		 justify-content: space-between;
+		 margin-bottom: 24rpx;
+
+		 .picker-title {
+		  font-size: 32rpx;
+		  font-weight: var(--weight-semibold);
+		  color: var(--text-primary);
+		 }
+
+		 .picker-close {
+		  font-size: 28rpx;
+		  color: var(--text-secondary);
+		  padding: 8rpx;
+
+		  &:active {
+		   opacity: 0.6;
+		  }
+		 }
+		}
+
+		.picker-grid {
+		 display: flex;
+		 flex-wrap: wrap;
+		 gap: 16rpx;
+		 justify-content: center;
+		}
+
+		.picker-item {
+		 width: 96rpx;
+		 height: 96rpx;
+		 border-radius: 50%;
+		 background: var(--bg-primary);
+		 display: flex;
+		 align-items: center;
+		 justify-content: center;
+		 transition: all 0.15s;
+
+		 .picker-emoji {
+		  font-size: 44rpx;
+		  line-height: 1;
+		 }
+
+		 &.active {
+		  background: rgba($theme-accent, 0.15);
+		  outline: 3rpx solid $theme-accent;
+		 }
+
+		 &:active {
+		  transform: scale(0.9);
+		 }
+		}
+
+		/* ========== 个人资料编辑弹窗 ========== */
+		.profile-editor {
+		 background: var(--card);
+		 border-radius: 24rpx;
+		 padding: 32rpx;
+		 width: 560rpx;
+		}
+
+		.editor-form {
+		 display: flex;
+		 flex-direction: column;
+		 gap: 24rpx;
+		}
+
+		.editor-field {
+		 display: flex;
+		 flex-direction: column;
+		 gap: 10rpx;
+
+		 .editor-label {
+		  font-size: 26rpx;
+		  font-weight: var(--weight-medium);
+		  color: var(--text-primary);
+		 }
+
+		 .editor-input {
+		  background: var(--bg-primary);
+		  border: 1px solid var(--border);
+		  border-radius: 12rpx;
+		  padding: 20rpx 24rpx;
+		  font-size: 26rpx;
+		  color: var(--text-primary);
+		 }
+		}
+
+		.editor-btn {
+		 background: $theme-accent;
+		 color: #fff;
+		 text-align: center;
+		 border-radius: 12rpx;
+		 padding: 20rpx 0;
+		 font-size: 28rpx;
+		 font-weight: var(--weight-semibold);
+		 margin-top: 8rpx;
+
+		 &:active {
+		  opacity: 0.85;
+		 }
+		}
+
+		/* ========== 统计卡片 ========== */
 	.stats-row {
 		display: flex;
 		gap: 12rpx;

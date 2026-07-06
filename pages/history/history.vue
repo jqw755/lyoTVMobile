@@ -1,14 +1,21 @@
 <template>
   <view class="page">
-    <!-- 空状态 -->
-    <view class="empty" v-if="list.length === 0">
-      <uni-icons type="clock" size="60" color="#555" />
-      <text class="empty-text">暂无观看记录</text>
-      <text class="empty-sub">快去观看影片吧</text>
-    </view>
+   <!-- 空状态 -->
+   <view class="empty" v-if="!loggedIn">
+    <uni-icons type="clock" size="60" color="#555" />
+    <text class="empty-text">请先登录</text>
+    <text class="empty-sub">登录后观看历史将同步到云端</text>
+    <view class="login-btn" @tap="goLogin">去登录</view>
+   </view>
 
-    <!-- 列表 -->
-    <view class="list" v-else>
+   <view class="empty" v-else-if="list.length === 0 && !loading">
+    <uni-icons type="clock" size="60" color="#555" />
+    <text class="empty-text">暂无观看记录</text>
+    <text class="empty-sub">快去观看影片吧</text>
+   </view>
+
+   <!-- 列表 -->
+   <view class="list" v-else-if="list.length > 0">
       <view
         v-for="item in list"
         :key="item.vod_id + item.time"
@@ -39,41 +46,64 @@
 
 <script setup>
 import { ref } from 'vue'
-import { getHistory, clearHistory, addHistory } from '@/utils/store.js'
+import { getHistory, clearHistory, addHistory, removeHistoryItem, getCurrentUser } from '@/utils/store.js'
 
 const list = ref([])
+const loading = ref(false)
+const loggedIn = ref(false)
 
-function load() {
-  list.value = getHistory()
-}
+async function load() {
+  loggedIn.value = !!getCurrentUser()
+  if (!loggedIn.value) {
+   list.value = []
+   return
+  }
+  loading.value = true
+  try {
+   list.value = await getHistory()
+  } catch {
+   list.value = []
+  } finally {
+   loading.value = false
+  }
+ }
+
+ function goLogin() {
+  uni.navigateTo({ url: '/pages/login/login' })
+ }
 
 // 用 onShow 确保每次切到 tab 都刷新
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 onShow(() => load())
 
 onPullDownRefresh(() => {
-  load()
-  uni.stopPullDownRefresh()
+ load().finally(() => uni.stopPullDownRefresh())
 })
 
-function remove(vodId, time) {
-  list.value = list.value.filter(
-    (item) => !(item.vod_id === vodId && item.time === time)
-  )
-  uni.setStorageSync('lyotv_history', list.value)
+async function remove(vodId, time) {
+ try {
+  list.value = await removeHistoryItem(vodId, time)
+  uni.showToast({ title: '已删除', icon: 'none' })
+ } catch {
+  uni.showToast({ title: '删除失败', icon: 'none' })
+ }
 }
 
-function onClear() {
-  uni.showModal({
-    title: '提示',
-    content: '确定清空所有观看记录吗？',
-    success: (res) => {
-      if (res.confirm) {
-        clearHistory()
-        list.value = []
-      }
-    },
-  })
+async function onClear() {
+ uni.showModal({
+  title: '提示',
+  content: '确定清空所有观看记录吗？',
+  success: async (res) => {
+   if (res.confirm) {
+    try {
+     list.value = await clearHistory()
+     uni.showToast({ title: '已清空', icon: 'success' })
+    } catch {
+     uni.showToast({ title: '清空失败', icon: 'none' })
+    }
+   }
+  },
+ })
 }
 
 function goDetail(item) {
@@ -124,7 +154,21 @@ function pad(n) {
     font-size: var(--text-sm);
     color: #555;
   }
-}
+
+  .login-btn {
+    margin-top: 24rpx;
+    padding: 16rpx 60rpx;
+    background: $theme-accent;
+    border-radius: 40rpx;
+    color: #fff;
+    font-size: 28rpx;
+    font-weight: 600;
+
+    &:active {
+      opacity: 0.8;
+    }
+  }
+       }
 
 .list {
   padding: 12rpx 16rpx;

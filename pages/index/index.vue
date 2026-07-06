@@ -67,7 +67,8 @@
 		category
 	} from '@/utils/api.js'
 	import {
-		addHistory
+		addHistory,
+		getSetting
 	} from '@/utils/store.js'
 	import {
 		store,
@@ -93,17 +94,7 @@
 	const gridCols = ref(4)
 
 	function loadGridCols() {
-		try {
-			const saved = uni.getStorageSync('lyotv_grid_cols')
-			if (saved) {
-				const map = {
-					large: 3,
-					medium: 4,
-					small: 5
-				}
-				gridCols.value = map[saved] ?? saved
-			}
-		} catch {}
+	 gridCols.value = getSetting('grid_cols', 4)
 	}
 	loadGridCols()
 	uni.$on('gridColsChanged', (val) => {
