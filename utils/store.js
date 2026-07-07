@@ -4,8 +4,8 @@
  * 核心规则：
  *   - 强制登录：未登录时收藏/历史返回空列表
  *   - 登录时：自动合并本地遗留数据到云端
- *   - 退出时：清空本地所有缓存
- *   - 偏好设置：全部存云端 profiles.preferences，不落本地
+ *   - 退出时：清空收藏/历史本地缓存，保留偏好/订阅源
+ *   - 偏好设置：本地内存双缓存 + 防抖批量同步云端
  *   - 纯用户名登录：内部拼接 @lyo.tv 后缀适配 Supabase email 格式
  */
 import { supabase } from '@/utils/supabase.js'
@@ -34,9 +34,16 @@ const PREFS_CACHE_KEY = 'lyotv_prefs_cache'
 //
 // 设计：
 //   setSetting → 写内存 + 写本地缓存（即时）→ 标记 dirty → 30s 防抖后 batch 提交云端
-//   getSetting → 读内存（登录时已从云端加载，未登录时为 null 返回默认值）
+//   getSetting → 读内存（启动时从本地缓存加载，登录后从云端覆盖）
 //   触发刷新的时机：App 进入后台 (onHide)、退出登录、主动调 flushPreferences()
 //
+
+/**
+ * App 启动时调用：从本地缓存加载偏好设置（未登录时也能用上次的偏好）
+ */
+export function loadLocalPreferences() {
+  _loadLocalPreferences()
+}
 
 function _loadLocalPreferences() {
   try {
@@ -128,7 +135,8 @@ export async function initAuth() {
       await _loadProfile()
     } else {
       _profile = null
-      _preferences = null
+      // 不清 _preferences：logout() 已显式处理缓存恢复
+      // 被动登出（session 过期等）也应保留用户的偏好设定
     }
   })
   return _currentUser
@@ -152,6 +160,8 @@ async function _loadProfile() {
   _profile = data || null
   _preferences = data?.preferences || {}
   _saveLocalPreferences() // 缓存到本地，下次启动秒回
+  // 通知 App.vue 重新应用主题（登录后云端偏好已加载）
+  uni.$emit('preferencesLoaded', _preferences)
 }
 
 /**
@@ -174,29 +184,7 @@ export async function login(username, password) {
 }
 
 /**
- * 注册 - 用户名+密码，内部转为 email 格式
- */
-export async function register(nickname, username, password) {
-  const email = username.trim() + EMAIL_SUFFIX
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  })
-  if (error) throw new Error(error.message)
-  if (!data.user) throw new Error('注册失败，请重试')
-  _currentUser = data.user
-  // 创建用户扩展信息
-  await supabase.from('profiles').insert({
-    id: data.user.id,
-    nickname: nickname || '',
-    avatar_url: '',
-  })
-  await _loadProfile()
-  return _currentUser
-}
-
-/**
- * 退出登录 → 先提交未同步的偏好 → 清空本地所有缓存
+ * 退出登录 → 先提交未同步的偏好 → 清空本地缓存 → 通知主题重置
  */
 export async function logout() {
   // 先把偏好提交到云端
@@ -205,19 +193,21 @@ export async function logout() {
   if (error) throw new Error(error.message)
   _currentUser = null
   _profile = null
-  _preferences = null
   _clearLocalCache()
+  // 从保留的磁盘缓存重新加载偏好（主题、列数等保持不变，不清用户的个人设置）
+  _loadLocalPreferences()
+  // 通知 App.vue 重新应用主题（此时 _preferences 已从缓存恢复）
+  uni.$emit('preferencesLoaded', _preferences)
 }
 
 function _clearLocalCache() {
   try {
-    // 保留设置、主题、订阅源等
+    // 退出时保留：订阅源历史、偏好缓存（下次启动未登录也能用上次设定）
+    // 清空：收藏、历史（这些属于已登录用户的数据）
     const keep = [
-      STORAGE_KEYS.SETTINGS,
       STORAGE_KEYS.SUB_URL,
-      STORAGE_KEYS.THEME,
-      STORAGE_KEYS.GRID_COLS,
       STORAGE_KEYS.SUB_HISTORY,
+      PREFS_CACHE_KEY,
     ]
     const keys = uni.getStorageInfoSync().keys || []
     keys.forEach((k) => {
@@ -541,45 +531,7 @@ export async function clearHistory() {
   return []
 }
 
-// ==================== 偏好设置（全部云端 profiles.preferences，不落本地） ====================
 
-/**
- * 获取偏好设置
- * 已登录 → 从内存缓存读取（登录时已从云端加载）
- * 未登录 → 返回默认值
- */
-export function getSetting(key, defaultValue = null) {
-  if (_preferences && typeof _preferences === 'object' && key in _preferences) {
-    return _preferences[key]
-  }
-  return defaultValue
-}
-
-/**
- * 保存偏好设置
- * 已登录 → 更新内存缓存 + 同步云端
- * 未登录 → 仅内存缓存（下次登录后丢失）
- */
-export async function setSetting(key, value) {
-  if (!_preferences) _preferences = {}
-  _preferences[key] = value
-
-  if (_currentUser) {
-    // 构建要写入云端的数据
-    const prefs = { ..._preferences }
-    await supabase
-      .from('profiles')
-      .update({ preferences: prefs })
-      .eq('id', _currentUser.id)
-  }
-}
-
-/**
- * 获取完整偏好对象（供 App.vue 启动时读取）
- */
-export function getAllPreferences() {
-  return _preferences || {}
-}
 
 // ==================== 订阅历史（始终本地，退出不清） ====================
 

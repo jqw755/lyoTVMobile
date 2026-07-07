@@ -8,11 +8,12 @@
 		<view class="form">
 			<view class="field">
 				<text class="label">用户名</text>
-				<input v-model="username" class="input" placeholder="输入用户名" placeholder-class="ph" />
+				<input v-model="username" class="input" placeholder="输入用户名" placeholder-class="ph" maxlength="10" />
 			</view>
 			<view class="field">
 				<text class="label">密码</text>
-				<input v-model="password" class="input" password placeholder="输入密码" placeholder-class="ph" />
+				<input v-model="password" class="input" password placeholder="输入密码" placeholder-class="ph"
+					maxlength="18" />
 			</view>
 
 			<view class="btn" @tap="onLogin" v-if="!loading">
@@ -21,10 +22,6 @@
 			<view class="btn loading-btn" v-else>
 				<uni-icons type="spinner-cycle" size="18" color="#fff" />
 				<text>登录中...</text>
-			</view>
-
-			<view class="switch" @tap="goRegister">
-				<text>还没有账号？去注册</text>
 			</view>
 		</view>
 
@@ -35,36 +32,47 @@
 </template>
 
 <script setup>
-	import { ref } from 'vue'
-	import { login } from '@/utils/store.js'
+	import {
+		ref
+	} from 'vue'
+	import {
+		login
+	} from '@/utils/store.js'
 
 	const username = ref('')
 	const password = ref('')
 	const loading = ref(false)
 
 	async function onLogin() {
-	  const u = username.value.trim()
-	  const p = password.value.trim()
-	  if (!u || !p) {
-	   uni.showToast({ title: '请填写完整', icon: 'none' })
-	   return
-	  }
-	  loading.value = true
-	  try {
-	   await login(u, p)
-	   uni.showToast({ title: '登录成功', icon: 'success' })
-	   setTimeout(() => uni.switchTab({ url: '/pages/mine/mine' }), 500)
-	  } catch (e) {
-	   uni.showToast({ title: e.message || '登录失败', icon: 'none' })
-	  } finally {
-	   // 无论成功失败，清除密码变量
-	   password.value = ''
-	   loading.value = false
-	  }
-	 }
-
-	function goRegister() {
-		uni.navigateTo({ url: '/pages/register/register' })
+		const u = username.value.trim()
+		const p = password.value.trim()
+		if (!u || !p) {
+			uni.showToast({
+				title: '请填写完整',
+				icon: 'none'
+			})
+			return
+		}
+		loading.value = true
+		try {
+			await login(u, p)
+			uni.showToast({
+				title: '登录成功',
+				icon: 'success'
+			})
+			setTimeout(() => uni.switchTab({
+				url: '/pages/mine/mine'
+			}), 500)
+		} catch (e) {
+			uni.showToast({
+				title: e.message || '登录失败',
+				icon: 'none'
+			})
+		} finally {
+			// 无论成功失败，清除密码变量
+			password.value = ''
+			loading.value = false
+		}
 	}
 
 	function goBack() {
@@ -74,7 +82,6 @@
 
 <style lang="scss" scoped>
 	.page {
-		min-height: 100vh;
 		background: var(--bg-primary);
 		padding: 40rpx 32rpx;
 		display: flex;
@@ -170,7 +177,7 @@
 
 	.skip {
 		text-align: center;
-		padding: 20rpx 0 40rpx;
+		padding: 50rpx 0 40rpx;
 
 		text {
 			font-size: 24rpx;

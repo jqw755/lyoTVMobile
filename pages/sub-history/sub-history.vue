@@ -198,8 +198,8 @@
 				}
 
 				&.delete {
-					color: #e74c3c;
-					background: rgba(#e74c3c, 0.1);
+					color: #fe8027;
+					background: rgba(#fe8027, 0.1);
 				}
 			}
 		}
@@ -219,7 +219,7 @@
 			display: block;
 			text-align: center;
 			font-size: 26rpx;
-			color: #e74c3c;
+			color: #fe8027;
 			background: var(--card);
 			border-radius: 16rpx;
 			padding: 20rpx 0;

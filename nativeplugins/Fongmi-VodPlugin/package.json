@@ -1,8 +1,8 @@
 {
   "name": "Fongmi-VodPlugin",
   "id": "Fongmi-VodPlugin",
-  "version": "1.0.0",
-  "description": "CatVod 源解析原生插件",
+  "version": "1.0.1",
+  "description": "CatVod 源解析原生插件（点播+卫视双链路）",
   "_dp_type": "nativeplugin",
   "_dp_nativeplugin": {
     "android": {
@@ -11,6 +11,11 @@
           "type": "module",
           "name": "Fongmi-VodPlugin",
           "class": "com.fongmi.vod.VodModule"
+        },
+        {
+          "type": "module",
+          "name": "Fongmi-LivePlugin",
+          "class": "com.fongmi.vod.LiveModule"
         }
       ],
       "integrateType": "aar",

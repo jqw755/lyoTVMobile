@@ -82,12 +82,13 @@ function callPlugin(method, args = {}, timeout = 15000) {
   })
 }
 
-/** App 启动时只初始化插件和站点（不拉首页，让首页自己处理 loading） */
+/** App 启动时初始化插件（点播+直播双链路） */
 export async function initApp() {
   if (!store.subUrl) {
     return
   }
   try {
+    // 点播链路初始化
     const initRet = await init(store.subUrl)
     try {
       const siteData = await getSites()
@@ -95,6 +96,12 @@ export async function initApp() {
       updateSites(siteData)
     } catch (e2) {
       // ignore
+    }
+    // 直播链路初始化（同一订阅源中的 lives 字段）
+    try {
+      await liveInit(store.subUrl)
+    } catch (e3) {
+      // 没有直播数据不报错
     }
     return initRet
   } catch (e) {
@@ -134,4 +141,42 @@ export function searchSite(keyword, siteKey) {
 
 export function player(flag, id, siteKey) {
   return callPlugin('player', { flag, id, key: siteKey })
+}
+
+// ===== 卫视直播 API（LiveModule 平行链路） =====
+
+/**
+ * 初始化直播订阅源
+ * 与原 init() 平行：同一订阅 JSON 中既有 sites 也有 lives
+ */
+export function liveInit(url) {
+  return callPlugin('liveInit', { url }, 35000)
+}
+
+/**
+ * 获取直播分组列表
+ * @returns [{name, channelCount}]
+ */
+export function liveGetGroups() {
+  return callPlugin('liveGetGroups')
+}
+
+/**
+ * 获取指定分组的频道列表
+ * @param {string} groupName 分组名
+ * @returns [{number, name, logo, urls, tvgId}]
+ */
+export function liveGetChannels(groupName) {
+  return callPlugin('liveGetChannels', { group: groupName })
+}
+
+/**
+ * 获取频道播放地址
+ * @param {string} channelName 频道名
+ * @param {string} groupName 分组名
+ * @param {number} line 线路索引（0开始），跨线切换
+ * @returns {url, header}
+ */
+export function liveGetUrl(channelName, groupName, line = 0) {
+  return callPlugin('liveGetUrl', { channel: channelName, group: groupName, line })
 }

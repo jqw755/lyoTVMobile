@@ -1,57 +1,57 @@
 <template>
 	<view class="page">
 		<!-- 用户头部 -->
-		  <view class="profile">
-		   <view class="avatar" @tap="loggedIn ? showAvatarPicker = true : onProfileTap()">
-		    <text class="avatar-emoji">{{ displayAvatar }}</text>
-		   </view>
-		   <view class="profile-info" @tap="loggedIn ? openProfileEditor() : onProfileTap()">
-		    <text class="name">{{ loggedIn ? (profile?.nickname || '用户') : '点击登录' }}</text>
-		    <text class="bio">{{ loggedIn ? bioText : '登录后同步收藏和历史到云端' }}</text>
-		   </view>
-		   <view class="profile-arrow" v-if="loggedIn" @tap="openProfileEditor()">
-		    <uni-icons type="arrowright" size="16" color="#555" />
-		   </view>
-		  </view>
+		<view class="profile">
+			<view class="avatar" @tap="loggedIn ? showAvatarPicker = true : onProfileTap()">
+				<text class="avatar-emoji">{{ displayAvatar }}</text>
+			</view>
+			<view class="profile-info" @tap="loggedIn ? openProfileEditor() : onProfileTap()">
+				<text class="name">{{ loggedIn ? (profile?.nickname || '用户') : '点击登录' }}</text>
+				<text class="bio">{{ loggedIn ? bioText : '登录后同步收藏和历史到云端' }}</text>
+			</view>
+			<view class="profile-arrow" v-if="loggedIn" @tap="openProfileEditor()">
+				<uni-icons type="arrowright" size="16" color="#555" />
+			</view>
+		</view>
 
-		  <!-- 头像选择弹窗 -->
-		  <view class="avatar-overlay" v-if="showAvatarPicker" @tap.self="showAvatarPicker = false">
-		   <view class="avatar-picker">
-		    <view class="picker-header">
-		     <text class="picker-title">选择头像</text>
-		     <text class="picker-close" @tap="showAvatarPicker = false">✕</text>
-		    </view>
-		    <view class="picker-grid">
-		     <view v-for="a in ANIMAL_AVATARS" :key="a" class="picker-item"
-		      :class="{ active: selectedAvatar === a }" @tap="selectAvatar(a)">
-		      <text class="picker-emoji">{{ a }}</text>
-		     </view>
-		    </view>
-		   </view>
-		  </view>
+		<!-- 头像选择弹窗 -->
+		<view class="avatar-overlay" v-if="showAvatarPicker" @tap.self="showAvatarPicker = false">
+			<view class="avatar-picker">
+				<view class="picker-header">
+					<text class="picker-title">选择头像</text>
+					<text class="picker-close" @tap="showAvatarPicker = false">✕</text>
+				</view>
+				<view class="picker-grid">
+					<view v-for="a in ANIMAL_AVATARS" :key="a" class="picker-item"
+						:class="{ active: selectedAvatar === a }" @tap="selectAvatar(a)">
+						<text class="picker-emoji">{{ a }}</text>
+					</view>
+				</view>
+			</view>
+		</view>
 
-		  <!-- 个人资料编辑弹窗 -->
-		  <view class="avatar-overlay" v-if="showProfileEditor" @tap.self="closeProfileEditor">
-		   <view class="profile-editor">
-		    <view class="picker-header">
-		     <text class="picker-title">编辑资料</text>
-		     <text class="picker-close" @tap="closeProfileEditor">✕</text>
-		    </view>
-		    <view class="editor-form">
-		     <view class="editor-field">
-		      <text class="editor-label">昵称</text>
-		      <input class="editor-input" v-model="editNickname" placeholder="输入昵称" maxlength="20" />
-		     </view>
-		     <view class="editor-field">
-		      <text class="editor-label">简介</text>
-		      <input class="editor-input" v-model="editBio" placeholder="一句话介绍自己" maxlength="50" />
-		     </view>
-		     <text class="editor-btn" @tap="saveProfile">保存</text>
-		    </view>
-		   </view>
-		  </view>
+		<!-- 个人资料编辑弹窗 -->
+		<view class="avatar-overlay" v-if="showProfileEditor" @tap.self="closeProfileEditor">
+			<view class="profile-editor">
+				<view class="picker-header">
+					<text class="picker-title">编辑资料</text>
+					<text class="picker-close" @tap="closeProfileEditor">✕</text>
+				</view>
+				<view class="editor-form">
+					<view class="editor-field">
+						<text class="editor-label">昵称</text>
+						<input class="editor-input" v-model="editNickname" placeholder="输入昵称" maxlength="20" />
+					</view>
+					<view class="editor-field">
+						<text class="editor-label">简介</text>
+						<input class="editor-input" v-model="editBio" placeholder="一句话介绍自己" maxlength="50" />
+					</view>
+					<text class="editor-btn" @tap="saveProfile">保存</text>
+				</view>
+			</view>
+		</view>
 
-		  <!-- 统计卡片（我的收藏 / 观看历史 / 下载） -->
+		<!-- 统计卡片（我的收藏 / 观看历史 / 下载） -->
 		<view class="stats-row">
 			<view class="stat-card" @tap="goPage('favorite')">
 				<text class="stat-count">{{ favCount }}</text>
@@ -70,12 +70,12 @@
 		<!-- 订阅源设置 -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="link" size="16" color="#888" />
+				<uni-icons type="link" size="17" color="#888" />
 				<text class="section-title">订阅源</text>
 			</view>
 			<view class="sub-input">
-				<input v-model="subUrl" placeholder="输入订阅地址（JSON URL）" placeholder-class="placeholder" />
-				<uni-icons v-if="subUrl" type="closeempty" size="16" color="#999" class="sub-clear-icon"
+				<input v-model="subUrl" placeholder="输入订阅地址（JSON URL）" placeholder-class="placeholder" maxlength="50" />
+				<uni-icons v-if="subUrl" type="closeempty" size="17" color="#999" class="sub-clear-icon"
 					@tap="subUrl = ''" />
 				<text class="sub-btn" @tap="submitSub">确定</text>
 			</view>
@@ -92,7 +92,7 @@
 		<!-- 首页布局 -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="image-filled" size="14" color="#888" />
+				<uni-icons type="image-filled" size="16" color="#888" />
 				<text class="section-title">首页布局</text>
 			</view>
 			<view class="img-size-options">
@@ -107,7 +107,7 @@
 		<!-- 显示主题（深色/浅色） -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="color-filled" size="14" color="#888" />
+				<uni-icons type="color-filled" size="16" color="#888" />
 				<text class="section-title">显示主题</text>
 			</view>
 			<view class="setting-item">
@@ -121,7 +121,7 @@
 		<!-- 播放设置 -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="videocam-filled" size="14" color="#888" />
+				<uni-icons type="videocam-filled" size="16" color="#888" />
 				<text class="section-title">播放设置</text>
 			</view>
 			<view class="setting-item">
@@ -159,7 +159,7 @@
 
 		<!-- 关于 -->
 		<view class="about">
-			<text class="version">乐意欧TV v1.0.8</text>
+			<text class="version">乐意欧TV v1.0.10</text>
 		</view>
 	</view>
 </template>
@@ -179,20 +179,21 @@
 	import {
 		init as apiInit,
 		home,
-		getSites
+		getSites,
+		liveInit
 	} from '@/utils/api.js'
 	import {
-	 getFavorites,
-	 getHistory,
-	 getSetting,
-	 setSetting,
-	 getSubHistory,
-	 addSubHistory,
-	 removeSubHistory,
-	 getCurrentUser,
-	 getProfile,
-	 updateProfile,
-	 logout as cloudLogout,
+		getFavorites,
+		getHistory,
+		getSetting,
+		setSetting,
+		getSubHistory,
+		addSubHistory,
+		removeSubHistory,
+		getCurrentUser,
+		getProfile,
+		updateProfile,
+		logout as cloudLogout,
 	} from '@/utils/store.js'
 
 	const subUrl = ref('')
@@ -229,7 +230,9 @@
 	const cacheSize = ref('计算中…')
 
 	// ===== 头像 =====
-	const ANIMAL_AVATARS = ['🐱', '🐶', '🐰', '🐼', '🦊', '🐯', '🦁', '🐸', '🐵', '🦄', '🐷', '🐨', '🐲', '🦋', '🐙', '🦉', '🐧', '🐭', '🐮', '🐻']
+	const ANIMAL_AVATARS = ['🐱', '🐶', '🐰', '🐼', '🦊', '🐯', '🦁', '🐸', '🐵', '🦄', '🐷', '🐨', '🐲', '🦋', '🐙', '🦉',
+		'🐧', '🐭', '🐮', '🐻'
+	]
 	const showAvatarPicker = ref(false)
 	const selectedAvatar = ref('')
 
@@ -253,14 +256,14 @@
 	const historyCount = ref(0)
 
 	async function loadUserState() {
-	  const user = getCurrentUser()
-	  loggedIn.value = !!user
-	  if (user) {
-	   profile.value = getProfile()
-	   selectedAvatar.value = profile.value?.avatar_url || ''
-	  }
-	  await refreshCounts()
-	 }
+		const user = getCurrentUser()
+		loggedIn.value = !!user
+		if (user) {
+			profile.value = getProfile()
+			selectedAvatar.value = profile.value?.avatar_url || ''
+		}
+		await refreshCounts()
+	}
 
 	async function refreshCounts() {
 		try {
@@ -293,79 +296,106 @@
 	}
 
 	async function doLogout() {
-	  try {
-	   await cloudLogout()
-	   loggedIn.value = false
-	   profile.value = null
-	   selectedAvatar.value = ''
-	   favCount.value = 0
-	   historyCount.value = 0
-	   uni.showToast({
-	    title: '已退出',
-	    icon: 'success'
-	   })
-	  } catch (e) {
-	   uni.showToast({
-	    title: '退出失败',
-	    icon: 'none'
-	   })
-	  }
-	 }
+		try {
+			await cloudLogout()
+			loggedIn.value = false
+			profile.value = null
+			selectedAvatar.value = ''
+			favCount.value = 0
+			historyCount.value = 0
+			uni.showToast({
+				title: '已退出',
+				icon: 'success'
+			})
+		} catch (e) {
+			uni.showToast({
+				title: '退出失败',
+				icon: 'none'
+			})
+		}
+	}
 
-	 async function selectAvatar(emoji) {
-	  try {
-	   await updateProfile({ avatar_url: emoji })
-	   selectedAvatar.value = emoji
-	   showAvatarPicker.value = false
-	   uni.showToast({ title: '头像已更换', icon: 'success' })
-	  } catch (e) {
-	   uni.showToast({ title: '保存失败', icon: 'none' })
-	  }
-	 }
+	async function selectAvatar(emoji) {
+		try {
+			await updateProfile({
+				avatar_url: emoji
+			})
+			selectedAvatar.value = emoji
+			showAvatarPicker.value = false
+			uni.showToast({
+				title: '头像已更换',
+				icon: 'success'
+			})
+		} catch (e) {
+			uni.showToast({
+				title: '保存失败',
+				icon: 'none'
+			})
+		}
+	}
 
-	 // ===== 个人资料编辑 =====
-	 function openProfileEditor() {
-	  editNickname.value = profile.value?.nickname || ''
-	  editBio.value = profile.value?.preferences?.bio || ''
-	  showProfileEditor.value = true
-	 }
+	// ===== 个人资料编辑 =====
+	function openProfileEditor() {
+		editNickname.value = profile.value?.nickname || ''
+		editBio.value = profile.value?.preferences?.bio || ''
+		showProfileEditor.value = true
+	}
 
-	 function closeProfileEditor() {
-	  showProfileEditor.value = false
-	 }
+	function closeProfileEditor() {
+		showProfileEditor.value = false
+	}
 
-	 async function saveProfile() {
-	  const nickname = editNickname.value.trim()
-	  const bio = editBio.value.trim()
-	  if (!nickname) {
-	   uni.showToast({ title: '昵称不能为空', icon: 'none' })
-	   return
-	  }
-	  try {
-	   await updateProfile({
-	    nickname,
-	    preferences: { ...(profile.value?.preferences || {}), bio }
-	   })
-	   // 更新本地 profile
-	   if (profile.value) {
-	    profile.value = { ...profile.value, nickname, preferences: { ...(profile.value.preferences || {}), bio } }
-	   }
-	   showProfileEditor.value = false
-	   uni.showToast({ title: '资料已保存', icon: 'success' })
-	  } catch (e) {
-	   uni.showToast({ title: '保存失败', icon: 'none' })
-	  }
-	 }
+	async function saveProfile() {
+		const nickname = editNickname.value.trim()
+		const bio = editBio.value.trim()
+		if (!nickname) {
+			uni.showToast({
+				title: '昵称不能为空',
+				icon: 'none'
+			})
+			return
+		}
+		try {
+			await updateProfile({
+				nickname,
+				preferences: {
+					...(profile.value?.preferences || {}),
+					bio
+				}
+			})
+			// 更新本地 profile
+			if (profile.value) {
+				profile.value = {
+					...profile.value,
+					nickname,
+					preferences: {
+						...(profile.value.preferences || {}),
+						bio
+					}
+				}
+			}
+			showProfileEditor.value = false
+			uni.showToast({
+				title: '资料已保存',
+				icon: 'success'
+			})
+		} catch (e) {
+			uni.showToast({
+				title: '保存失败',
+				icon: 'none'
+			})
+		}
+	}
 
 	onMounted(() => {
-	 // 图片列数（从云端偏好读取）
-	 currentCols.value = getSetting('grid_cols', 3)
-	 // 主题（从云端偏好读取）
-	 theme.value = getSetting('theme', 'dark')
-	 // 静音播放
-	 muted.value = getSetting('video_muted', true)
-	 // 长按倍速
-	 longPressSpeed.value = getSetting('long_press_speed', 2)
+		// 图片列数（从云端偏好读取）
+		currentCols.value = getSetting('grid_cols', 3)
+		// 主题（从云端偏好读取）
+		theme.value = getSetting('theme', 'dark')
+		// 静音播放
+		muted.value = getSetting('video_muted', true)
+		// 长按倍速
+		longPressSpeed.value = getSetting('long_press_speed', 2)
 		// 缓存大小
 		calcCacheSize()
 		// 加载用户状态
@@ -411,10 +441,10 @@
 			success: (res) => {
 				if (res.confirm) {
 					try {
-					 // 保留收藏/历史缓存（加速用）和订阅源相关
-					 const keep = ['lyotv_favorites', 'lyotv_history',
-					  'lyotv_sub_url', 'lyotv_sub_history'
-					 ]
+						// 保留收藏/历史缓存（加速用）和订阅源相关
+						const keep = ['lyotv_favorites', 'lyotv_history',
+							'lyotv_sub_url', 'lyotv_sub_history'
+						]
 						const keys = uni.getStorageInfoSync().keys || []
 						keys.forEach(k => {
 							if (!keep.includes(k)) {
@@ -464,16 +494,16 @@
 	}
 
 	function setTheme(val) {
-	  theme.value = val
-	  setSetting('theme', val)
-	  uni.$emit('themeChange', val)
-	 }
+		theme.value = val
+		setSetting('theme', val)
+		uni.$emit('themeChange', val)
+	}
 
-	 function setImgSize(cols) {
-	  currentCols.value = cols
-	  setSetting('grid_cols', cols)
-	  uni.$emit('gridColsChanged', cols)
-	 }
+	function setImgSize(cols) {
+		currentCols.value = cols
+		setSetting('grid_cols', cols)
+		uni.$emit('gridColsChanged', cols)
+	}
 
 	async function submitSub() {
 		const url = subUrl.value.trim()
@@ -490,6 +520,12 @@
 				updateSites(siteData)
 			} catch (e2) {
 				/* ignore */
+			}
+			// 直播链路初始化（同一订阅源中的 lives 字段）
+			try {
+				await liveInit(url)
+			} catch (e3) {
+				/* 没有直播数据不报错 */
 			}
 			const data = await home()
 			updateHome(data)
@@ -568,20 +604,20 @@
 		gap: 16rpx;
 
 		.avatar {
-		  width: 100rpx;
-		  height: 100rpx;
-		  border-radius: 50%;
-		  background: var(--card);
-		  display: flex;
-		  align-items: center;
-		  justify-content: center;
-		  flex-shrink: 0;
+			width: 100rpx;
+			height: 100rpx;
+			border-radius: 50%;
+			background: var(--card);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
 
-		  .avatar-emoji {
-		   font-size: 52rpx;
-		   line-height: 1;
-		  }
-		 }
+			.avatar-emoji {
+				font-size: 52rpx;
+				line-height: 1;
+			}
+		}
 
 		.profile-info {
 			flex: 1;
@@ -600,137 +636,137 @@
 				color: var(--text-secondary);
 			}
 		}
+	}
+
+	/* ========== 头像选择弹窗 ========== */
+	.avatar-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.5);
+		z-index: 1000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.avatar-picker {
+		background: var(--card);
+		border-radius: 24rpx;
+		padding: 32rpx;
+		width: 560rpx;
+		max-height: 70vh;
+		overflow-y: auto;
+	}
+
+	.picker-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 24rpx;
+
+		.picker-title {
+			font-size: 32rpx;
+			font-weight: var(--weight-semibold);
+			color: var(--text-primary);
 		}
 
-		/* ========== 头像选择弹窗 ========== */
-		.avatar-overlay {
-		 position: fixed;
-		 top: 0;
-		 left: 0;
-		 right: 0;
-		 bottom: 0;
-		 background: rgba(0, 0, 0, 0.5);
-		 z-index: 1000;
-		 display: flex;
-		 align-items: center;
-		 justify-content: center;
+		.picker-close {
+			font-size: 28rpx;
+			color: var(--text-secondary);
+			padding: 8rpx;
+
+			&:active {
+				opacity: 0.6;
+			}
+		}
+	}
+
+	.picker-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16rpx;
+		justify-content: center;
+	}
+
+	.picker-item {
+		width: 96rpx;
+		height: 96rpx;
+		border-radius: 50%;
+		background: var(--bg-primary);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.15s;
+
+		.picker-emoji {
+			font-size: 44rpx;
+			line-height: 1;
 		}
 
-		.avatar-picker {
-		 background: var(--card);
-		 border-radius: 24rpx;
-		 padding: 32rpx;
-		 width: 560rpx;
-		 max-height: 70vh;
-		 overflow-y: auto;
+		&.active {
+			background: rgba($theme-accent, 0.15);
+			outline: 3rpx solid $theme-accent;
 		}
 
-		.picker-header {
-		 display: flex;
-		 align-items: center;
-		 justify-content: space-between;
-		 margin-bottom: 24rpx;
+		&:active {
+			transform: scale(0.9);
+		}
+	}
 
-		 .picker-title {
-		  font-size: 32rpx;
-		  font-weight: var(--weight-semibold);
-		  color: var(--text-primary);
-		 }
+	/* ========== 个人资料编辑弹窗 ========== */
+	.profile-editor {
+		background: var(--card);
+		border-radius: 24rpx;
+		padding: 32rpx;
+		width: 560rpx;
+	}
 
-		 .picker-close {
-		  font-size: 28rpx;
-		  color: var(--text-secondary);
-		  padding: 8rpx;
+	.editor-form {
+		display: flex;
+		flex-direction: column;
+		gap: 24rpx;
+	}
 
-		  &:active {
-		   opacity: 0.6;
-		  }
-		 }
+	.editor-field {
+		display: flex;
+		flex-direction: column;
+		gap: 10rpx;
+
+		.editor-label {
+			font-size: 26rpx;
+			font-weight: var(--weight-medium);
+			color: var(--text-primary);
 		}
 
-		.picker-grid {
-		 display: flex;
-		 flex-wrap: wrap;
-		 gap: 16rpx;
-		 justify-content: center;
+		.editor-input {
+			background: var(--bg-primary);
+			border: 1px solid var(--border);
+			border-radius: 12rpx;
+			padding: 20rpx 24rpx;
+			font-size: 26rpx;
+			color: var(--text-primary);
 		}
+	}
 
-		.picker-item {
-		 width: 96rpx;
-		 height: 96rpx;
-		 border-radius: 50%;
-		 background: var(--bg-primary);
-		 display: flex;
-		 align-items: center;
-		 justify-content: center;
-		 transition: all 0.15s;
+	.editor-btn {
+		background: $theme-accent;
+		color: #fff;
+		text-align: center;
+		border-radius: 12rpx;
+		padding: 20rpx 0;
+		font-size: 28rpx;
+		font-weight: var(--weight-semibold);
+		margin-top: 8rpx;
 
-		 .picker-emoji {
-		  font-size: 44rpx;
-		  line-height: 1;
-		 }
-
-		 &.active {
-		  background: rgba($theme-accent, 0.15);
-		  outline: 3rpx solid $theme-accent;
-		 }
-
-		 &:active {
-		  transform: scale(0.9);
-		 }
+		&:active {
+			opacity: 0.85;
 		}
+	}
 
-		/* ========== 个人资料编辑弹窗 ========== */
-		.profile-editor {
-		 background: var(--card);
-		 border-radius: 24rpx;
-		 padding: 32rpx;
-		 width: 560rpx;
-		}
-
-		.editor-form {
-		 display: flex;
-		 flex-direction: column;
-		 gap: 24rpx;
-		}
-
-		.editor-field {
-		 display: flex;
-		 flex-direction: column;
-		 gap: 10rpx;
-
-		 .editor-label {
-		  font-size: 26rpx;
-		  font-weight: var(--weight-medium);
-		  color: var(--text-primary);
-		 }
-
-		 .editor-input {
-		  background: var(--bg-primary);
-		  border: 1px solid var(--border);
-		  border-radius: 12rpx;
-		  padding: 20rpx 24rpx;
-		  font-size: 26rpx;
-		  color: var(--text-primary);
-		 }
-		}
-
-		.editor-btn {
-		 background: $theme-accent;
-		 color: #fff;
-		 text-align: center;
-		 border-radius: 12rpx;
-		 padding: 20rpx 0;
-		 font-size: 28rpx;
-		 font-weight: var(--weight-semibold);
-		 margin-top: 8rpx;
-
-		 &:active {
-		  opacity: 0.85;
-		 }
-		}
-
-		/* ========== 统计卡片 ========== */
+	/* ========== 统计卡片 ========== */
 	.stats-row {
 		display: flex;
 		gap: 12rpx;
@@ -824,7 +860,7 @@
 	.setting-divider {
 		height: 1rpx;
 		background: var(--border);
-		margin: 16rpx 0;
+		margin: 20rpx 0;
 	}
 
 	/* 长按倍速选项 */
@@ -967,6 +1003,7 @@
 			font-size: 28rpx;
 			font-weight: 600;
 			color: var(--text-primary);
+			margin-right: 10rpx;
 
 			.active & {
 				color: $theme-accent;
