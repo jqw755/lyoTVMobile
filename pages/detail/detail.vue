@@ -1,15 +1,15 @@
 <template>
-	<view class="status-page" v-if="loading">
+	<view class="status-page" :style="themeStyle" v-if="loading">
 		<uni-icons type="spinner-cycle" size="36" color="#888" />
 		<text class="status-text">加载中...</text>
 	</view>
-	<view class="status-page" v-else-if="error">
+	<view class="status-page" :style="themeStyle" v-else-if="error">
 		<uni-icons type="closeempty" size="48" color="#888" />
 		<text class="status-text">加载失败</text>
 		<text class="status-detail" v-if="errorMsg">{{ errorMsg }}</text>
 		<text class="retry-btn" @tap="loadDetail">点击重试</text>
 	</view>
-	<view class="page" v-else-if="vod">
+	<view class="page" :style="themeStyle" v-else-if="vod">
 		<!-- 播放器 -->
 		<view class="player-area" @tap="onPlayerTap" @longpress="onLongPress" @touchend="onLongPressEnd"
 			@touchcancel="onLongPressEnd">
@@ -21,8 +21,9 @@
 				:controls="true" :page-gesture="true" :show-mute-btn="true" :enable-progress-gesture="true"
 				object-fit="contain" :poster="vod?.vod_poster || ''" :title="vod?.vod_name || ''"
 				:enable-play-gesture="true" :vslide-gesture="true" :vslide-gesture-in-fullscreen="true"
-				:http-cache="false" play-btn-position="center" :rate="playbackRate" style="width: 100%; height: 100%"
-				@error="onVideoError" @tap="onVideoTap" @fullscreenchange="onFullscreenChange" />
+				:http-cache="false" play-btn-position="center" :mobilenet-hint-type="1" :rate="playbackRate"
+				style="width: 100%; height: 100%" @error="onVideoError" @tap="onVideoTap"
+				@fullscreenchange="onFullscreenChange" />
 
 			<!-- 倍速控制（仅全屏展示） -->
 			<!-- 全圆倍速按钮 -->
@@ -118,6 +119,7 @@
 		onMounted,
 		onBeforeUnmount
 	} from "vue";
+	import { themeStyle } from '@/utils/theme.js'
 	import {
 		onLoad
 	} from "@dcloudio/uni-app";
@@ -127,13 +129,12 @@
 		searchSite
 	} from "@/utils/api.js";
 	import {
-		getFavorites,
-		addFavorite,
-		removeFavorite,
-		isFavorite,
-		addHistory,
-		getHistory,
-		getSetting,
+	 addFavorite,
+	 removeFavorite,
+	 isFavorite,
+	 addHistory,
+	 getHistory,
+	 getSetting,
 	} from "@/utils/store.js";
 	import {
 		store
@@ -264,11 +265,15 @@
 				title: item.vod_name
 			});
 			if (!vod.value.site_key && pageKey) vod.value.site_key = pageKey;
-			flags.value = item?.vodFlags || [];
-			if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
-			isFaved.value = await isFavorite(pageId);
-			const hist = await getHistory();
-			const found = hist.find((h) => h.vod_id === item.vod_id);
+			 flags.value = item?.vodFlags || [];
+			 if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
+
+			 // 收藏状态（非阻塞，查不到或失败静默处理）
+			 isFavorite(pageId).then(v => isFaved.value = v).catch(() => {})
+
+			 // 播放进度（从本地历史缓存恢复，同步无网络）
+			 const localHist = getHistory()
+			 const found = localHist.find((h) => h.vod_id === item.vod_id);
 			if (found) {
 				savedEpisode.value = found.episode || "";
 				savedProgress.value = found.progress || 0;

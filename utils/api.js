@@ -5,8 +5,10 @@
 import { store } from '@/utils/appState.js'
 
 const PLUGIN_NAME = 'Fongmi-VodPlugin'
+const LIVE_PLUGIN_NAME = 'Fongmi-LivePlugin'
 
 let vodPlugin = null
+let livePlugin = null
 
 function getPlugin() {
   if (vodPlugin) return vodPlugin
@@ -16,6 +18,16 @@ function getPlugin() {
     vodPlugin = null
   }
   return vodPlugin
+}
+
+function getLivePlugin() {
+  if (livePlugin) return livePlugin
+  try {
+    livePlugin = uni.requireNativePlugin(LIVE_PLUGIN_NAME)
+  } catch (e) {
+    livePlugin = null
+  }
+  return livePlugin
 }
 
 /**
@@ -82,6 +94,60 @@ function callPlugin(method, args = {}, timeout = 15000) {
   })
 }
 
+/**
+ * 调用直播插件方法（Fongmi-LivePlugin），返回 Promise（支持超时）
+ */
+function callLivePlugin(method, args = {}, timeout = 15000) {
+  return new Promise((resolve, reject) => {
+    const plugin = getLivePlugin()
+    if (!plugin) {
+      return reject(new Error('直播插件未注册，请使用自定义基座运行'))
+    }
+    if (typeof plugin[method] !== 'function') {
+      return reject(new Error(`直播插件未暴露方法: ${method}`))
+    }
+
+    let settled = false
+    const finish = (fn, val) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      fn(val)
+    }
+
+    const timer = setTimeout(() => {
+      finish(reject, new Error(`直播插件 ${method} 超时 (${timeout}ms)`))
+    }, timeout)
+
+    try {
+      plugin[method](args, (ret) => {
+        if (!ret) {
+          return finish(reject, new Error('直播插件返回空结果'))
+        }
+        const hasCode = typeof ret.code !== 'undefined'
+        const ok = !hasCode || ret.code === 0 || ret.code === 200
+        if (!ok) {
+          return finish(reject, new Error(ret.msg || `直播插件调用失败 code=${ret.code}`))
+        }
+        const data = ret.data
+        let parsed
+        if (data === undefined || data === null || data === '') {
+          parsed = ret
+        } else if (typeof data === 'string') {
+          try { parsed = JSON.parse(data) } catch (e) {
+            parsed = data
+          }
+        } else {
+          parsed = data
+        }
+        finish(resolve, parsed)
+      })
+    } catch (e) {
+      finish(reject, new Error(`直播插件调用异常: ${e.message}`))
+    }
+  })
+}
+
 /** App 启动时初始化插件（点播+直播双链路） */
 export async function initApp() {
   if (!store.subUrl) {
@@ -103,6 +169,8 @@ export async function initApp() {
     } catch (e3) {
       // 没有直播数据不报错
     }
+    // 广播通知首页等页面：插件已就绪，可以拉取数据了
+    uni.$emit('appReady')
     return initRet
   } catch (e) {
     return null
@@ -150,7 +218,7 @@ export function player(flag, id, siteKey) {
  * 与原 init() 平行：同一订阅 JSON 中既有 sites 也有 lives
  */
 export function liveInit(url) {
-  return callPlugin('liveInit', { url }, 35000)
+  return callLivePlugin('liveInit', { url }, 35000)
 }
 
 /**
@@ -158,7 +226,7 @@ export function liveInit(url) {
  * @returns [{name, channelCount}]
  */
 export function liveGetGroups() {
-  return callPlugin('liveGetGroups')
+  return callLivePlugin('liveGetGroups')
 }
 
 /**
@@ -167,7 +235,7 @@ export function liveGetGroups() {
  * @returns [{number, name, logo, urls, tvgId}]
  */
 export function liveGetChannels(groupName) {
-  return callPlugin('liveGetChannels', { group: groupName })
+  return callLivePlugin('liveGetChannels', { group: groupName })
 }
 
 /**
@@ -178,5 +246,5 @@ export function liveGetChannels(groupName) {
  * @returns {url, header}
  */
 export function liveGetUrl(channelName, groupName, line = 0) {
-  return callPlugin('liveGetUrl', { channel: channelName, group: groupName, line })
+  return callLivePlugin('liveGetUrl', { channel: channelName, group: groupName, line })
 }

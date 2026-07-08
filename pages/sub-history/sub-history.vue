@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :style="themeStyle">
 		<!-- 空状态 -->
 		<view v-if="list.length === 0" class="empty">
 			<uni-icons type="link" size="60" color="#555" />
@@ -9,19 +9,20 @@
 
 		<!-- 列表 -->
 		<view v-else class="list">
-			<view class="list-item" v-for="(item, index) in list" :key="item.url">
-				<view class="item-main">
-					<text class="item-index">#{{ index + 1 }}</text>
-					<view class="item-content">
-						<text class="item-url" lines="2">{{ item.url }}</text>
-						<text class="item-time">{{ formatTime(item.time) }}</text>
-					</view>
-				</view>
-				<view class="item-actions">
-					<text class="action-btn copy" @tap="copyUrl(item.url)">复制</text>
-					<text class="action-btn delete" @tap="deleteUrl(item.url)">删除</text>
-				</view>
-			</view>
+		 <view class="list-item" v-for="(item, index) in list" :key="item.url">
+		  <view class="item-main">
+		   <text class="item-index">{{ index + 1 }}</text>
+		   <view class="item-content">
+		    <text class="item-url" lines="2">{{ item.url }}</text>
+		    <text class="item-time">{{ formatTime(item.time) }}</text>
+		   </view>
+		   <text v-if="item.url === store.subUrl" class="item-badge">使用中</text>
+		  </view>
+		  <view class="item-actions">
+		   <text class="action-btn copy" @tap="copyUrl(item.url)">复制</text>
+		   <text v-if="item.url !== store.subUrl" class="action-btn delete" @tap="deleteUrl(item.url, index + 1)">删除</text>
+		  </view>
+		 </view>
 		</view>
 
 		<!-- 底部清空按钮 -->
@@ -37,9 +38,15 @@
 		onMounted
 	} from 'vue'
 	import {
-		getSubHistory,
-		removeSubHistory
+		themeStyle
+	} from '@/utils/theme.js'
+	import {
+	 getSubHistory,
+	 removeSubHistory
 	} from '@/utils/store.js'
+	import {
+	 store
+	} from '@/utils/appState.js'
 
 	const list = ref([])
 
@@ -70,30 +77,40 @@
 		})
 	}
 
-	function deleteUrl(url) {
-		removeSubHistory(url)
-		loadList()
-		uni.showToast({
-			title: '已删除',
-			icon: 'none'
-		})
-	}
-
-	function clearAll() {
+	function deleteUrl(url, idx) {
 		uni.showModal({
-			title: '清空历史',
-			content: '确定要清空所有订阅历史吗？',
+			title: '提示',
+			content: `确定删除第${idx}个订阅吗？`,
 			success: (res) => {
 				if (res.confirm) {
-					list.value.forEach(item => removeSubHistory(item.url))
+					removeSubHistory(url)
 					loadList()
 					uni.showToast({
-						title: '已清空',
-						icon: 'success'
+						title: '已删除',
+						icon: 'none'
 					})
 				}
 			}
 		})
+	}
+
+	function clearAll() {
+	 uni.showModal({
+	  title: '清空历史',
+	  content: '确定要清空所有订阅历史吗？（当前使用中的订阅不会被清除）',
+	  success: (res) => {
+	   if (res.confirm) {
+	    list.value.forEach(item => {
+	     if (item.url !== store.subUrl) removeSubHistory(item.url)
+	    })
+	    loadList()
+	    uni.showToast({
+	     title: '已清空',
+	     icon: 'success'
+	    })
+	   }
+	  }
+	 })
 	}
 </script>
 
@@ -102,6 +119,7 @@
 		min-height: 100vh;
 		background: var(--bg-primary);
 		padding-bottom: 100rpx;
+		padding-top: 10rpx;
 	}
 
 	/* 空状态 */
@@ -172,6 +190,18 @@
 					display: block;
 				}
 			}
+		}
+
+		.item-badge {
+			font-size: 20rpx;
+			color: $theme-accent;
+			background: rgba($theme-accent, 0.12);
+			padding: 4rpx 14rpx;
+			border-radius: 6rpx;
+			flex-shrink: 0;
+			align-self: flex-start;
+			margin-left: 12rpx;
+			font-weight: 500;
 		}
 
 		.item-actions {

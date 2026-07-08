@@ -2,9 +2,10 @@
  * 数据存储封装
  *
  * 核心规则：
- *   - 强制登录：未登录时收藏/历史返回空列表
- *   - 登录时：自动合并本地遗留数据到云端
- *   - 退出时：清空收藏/历史本地缓存，保留偏好/订阅源
+ *   - 收藏：即时云端读写，不存本地
+ *   - 观看历史：纯本地存储，不走云端
+ *   - 登录时：自动合并本地订阅历史到云端（无收藏/历史遗留数据）
+ *   - 退出时：清空本地历史缓存，保留偏好/订阅源
  *   - 偏好设置：本地内存双缓存 + 防抖批量同步云端
  *   - 纯用户名登录：内部拼接 @lyo.tv 后缀适配 Supabase email 格式
  */
@@ -14,7 +15,6 @@ import { supabase } from '@/utils/supabase.js'
 const EMAIL_SUFFIX = '@lyo.tv'
 
 const STORAGE_KEYS = {
-  FAVORITES: 'lyotv_favorites',
   HISTORY: 'lyotv_history',
   SUB_HISTORY: 'lyotv_sub_history',
   SUB_URL: 'lyotv_sub_url',
@@ -117,7 +117,47 @@ export async function setSetting(key, value) {
   _saveLocalPreferences()
   _prefsDirty = true
   _schedulePrefsSync()
-}
+ }
+
+ // ==================== 用户资料：本地优先 + 批量云端同步 ====================
+
+ let _profileDirty = false
+ let _profilePendingUpdates = {}
+ let _profileSyncTimer = null
+ const PROFILE_SYNC_DELAY = 30000
+
+ function _markProfileDirty(updates) {
+   Object.assign(_profilePendingUpdates, updates)
+   _profileDirty = true
+   if (_profileSyncTimer) clearTimeout(_profileSyncTimer)
+   _profileSyncTimer = setTimeout(() => _syncProfileToCloud(), PROFILE_SYNC_DELAY)
+ }
+
+ async function _syncProfileToCloud() {
+   if (!_currentUser || !_profileDirty) return
+   _profileSyncTimer = null
+
+   const updates = { ..._profilePendingUpdates }
+   try {
+     await supabase.from('profiles').update(updates).eq('id', _currentUser.id)
+     // 成功才清除待同步状态
+     _profileDirty = false
+     _profilePendingUpdates = {}
+   } catch {
+     // 失败保留 dirty + pending，等待下次重试
+   }
+ }
+
+ /**
+  * 立即将待同步的用户资料提交到云端
+  */
+ export function flushProfile() {
+   if (_profileDirty) {
+     if (_profileSyncTimer) clearTimeout(_profileSyncTimer)
+     _profileSyncTimer = null
+     return _syncProfileToCloud()
+   }
+ }
 
 /**
  * App 启动时调用，恢复登录态
@@ -154,7 +194,7 @@ async function _loadProfile() {
   if (!_currentUser) return
   const { data } = await supabase
     .from('profiles')
-    .select('nickname, avatar_url, preferences')
+    .select('nickname, avatar_url, introduction, preferences')
     .eq('id', _currentUser.id)
     .single()
   _profile = data || null
@@ -176,10 +216,6 @@ export async function login(username, password) {
   if (error) throw new Error(error.message)
   _currentUser = data.user
   await _loadProfile()
-  // 登录成功：合并本地遗留数据到云端
-  await _mergeLocalToCloud()
-  // 然后缓存云端数据到本地
-  await _cacheCloudDataLocally()
   return _currentUser
 }
 
@@ -187,8 +223,9 @@ export async function login(username, password) {
  * 退出登录 → 先提交未同步的偏好 → 清空本地缓存 → 通知主题重置
  */
 export async function logout() {
-  // 先把偏好提交到云端
+  // 先把偏好、资料等待同步数据提交到云端
   await flushPreferences()
+  await flushProfile()
   const { error } = await supabase.auth.signOut()
   if (error) throw new Error(error.message)
   _currentUser = null
@@ -203,8 +240,9 @@ export async function logout() {
 function _clearLocalCache() {
   try {
     // 退出时保留：订阅源历史、偏好缓存（下次启动未登录也能用上次设定）
-    // 清空：收藏、历史（这些属于已登录用户的数据）
+    // 清空：本地历史记录（登录用户相关）
     const keep = [
+      STORAGE_KEYS.HISTORY,
       STORAGE_KEYS.SUB_URL,
       STORAGE_KEYS.SUB_HISTORY,
       PREFS_CACHE_KEY,
@@ -219,197 +257,137 @@ function _clearLocalCache() {
 }
 
 /**
- * 更新用户资料
+ * 更新用户资料（本地优先，防抖批量同步云端）
+ * 昵称/简介/头像都即时更新本地缓存，云端在后台统一提交
  */
 export async function updateProfile(updates) {
   if (!_currentUser) throw new Error('未登录')
-  const { error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', _currentUser.id)
-  if (error) throw new Error(error.message)
+
+  // 立即更新本地缓存
   if (_profile) _profile = { ..._profile, ...updates }
   else _profile = updates
+
+  // 标记待同步（防抖 30s 后批量上传云端）
+  _markProfileDirty(updates)
 }
 
-// ==================== 登录时：合并本地→云端 ====================
+// ==================== 登录提示 ====================
 
-async function _mergeLocalToCloud() {
-  if (!_currentUser) return
-
-  // 合并收藏
-  const localFavs = _getRawLocalFavorites()
-  if (localFavs.length > 0) {
-    for (const item of localFavs) {
-      await supabase.from('favorites').upsert(
-        {
-          user_id: _currentUser.id,
-          vod_id: item.vod_id,
-          vod_name: item.vod_name || '',
-          vod_pic: item.vod_pic || '',
-          vod_remarks: item.vod_remarks || '',
-          site_key: item.site_key || '',
-          fav_time: item.fav_time || Date.now(),
-        },
-        { onConflict: 'user_id,vod_id', ignoreDuplicates: false }
-      )
-    }
-  }
-
-  // 合并历史
-  const localHist = _getRawLocalHistory()
-  if (localHist.length > 0) {
-    for (const item of localHist) {
-      const { data: existing } = await supabase
-        .from('histories')
-        .select('id')
-        .eq('user_id', _currentUser.id)
-        .eq('vod_id', item.vod_id)
-        .eq('view_time', item.time || item.view_time || 0)
-        .limit(1)
-      if (!existing || existing.length === 0) {
-        await supabase.from('histories').insert({
-          user_id: _currentUser.id,
-          vod_id: item.vod_id,
-          vod_name: item.vod_name || '',
-          vod_pic: item.vod_pic || '',
-          vod_remarks: item.vod_remarks || '',
-          site_key: item.site_key || '',
-          episode: item.episode || '',
-          progress: item.progress || 0,
-          view_time: item.time || item.view_time || Date.now(),
-        })
+/** 登录失效/未登录时弹窗提示，跳转到登录页（登录后自动返回） */
+function _promptLogin() {
+  if (_loginPrompting) return
+  _loginPrompting = true
+  uni.showModal({
+    title: '登录已失效',
+    content: '请重新登录后继续操作',
+    confirmText: '去登录',
+    cancelText: '暂不登录',
+    success: (res) => {
+      _loginPrompting = false
+      if (res.confirm) {
+        uni.navigateTo({ url: '/pages/login/login' })
       }
-    }
-  }
-
-  // 合并完后清空本地遗留数据（后续靠云端缓存）
-  _setRawLocalFavorites([])
-  _setRawLocalHistory([])
+    },
+    fail: () => { _loginPrompting = false },
+  })
 }
+let _loginPrompting = false
 
-// ==================== 登录后：缓存云端数据到本地 ====================
-
-async function _cacheCloudDataLocally() {
-  if (!_currentUser) return
-  try {
-    const { data: favs } = await supabase
-      .from('favorites')
-      .select('*')
-      .order('fav_time', { ascending: false })
-    if (favs) _setRawLocalFavorites(favs)
-  } catch {
-    // ignore
-  }
-  try {
-    const { data: hist } = await supabase
-      .from('histories')
-      .select('*')
-      .order('view_time', { ascending: false })
-    if (hist) _setRawLocalHistory(hist)
-  } catch {
-    // ignore
-  }
-}
-
-// ==================== 收藏 ====================
-
-function _getRawLocalFavorites() {
-  try {
-    return uni.getStorageSync(STORAGE_KEYS.FAVORITES) || []
-  } catch {
-    return []
-  }
-}
-
-function _setRawLocalFavorites(list) {
-  try {
-    uni.setStorageSync(STORAGE_KEYS.FAVORITES, list)
-  } catch {
-    // ignore
-  }
-}
+// ==================== 收藏（直查云端，无本地缓存） ====================
 
 /**
  * 获取收藏列表
  * 未登录 → 返回空数组
- * 已登录 → 从本地缓存读取（瞬间返回），后台静默刷新云端最新数据
  */
 export async function getFavorites() {
-  if (!_currentUser) return []
-
-  // 先返回本地缓存（瞬间）
-  const cached = _getRawLocalFavorites()
-  if (cached.length > 0) {
-    // 后台静默刷新
-    _refreshFavoritesCache()
-  }
-  if (cached.length > 0) return cached
-
-  // 无缓存则直接从云端拉
-  return _refreshFavoritesCache()
-}
-
-async function _refreshFavoritesCache() {
   if (!_currentUser) return []
   try {
     const { data, error } = await supabase
       .from('favorites')
       .select('*')
       .order('fav_time', { ascending: false })
+    if (!error && data) return data
+  } catch { /* ignore */ }
+  return []
+}
+
+/**
+ * 服务端分页获取收藏
+ * @param {number} page 页码（从1开始）
+ * @param {number} pageSize 每页条数（默认20）
+ * @returns {{ items: Array, hasMore: boolean }}
+ */
+export async function getFavoritesPaginated(page = 1, pageSize = 20) {
+  if (!_currentUser) return { items: [], hasMore: false }
+  const start = (page - 1) * pageSize
+  const end = start + pageSize - 1
+  try {
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('*')
+      .order('fav_time', { ascending: false })
+      .range(start, end)
     if (!error && data) {
-      _setRawLocalFavorites(data)
-      return data
+      return { items: data, hasMore: data.length >= pageSize }
     }
-  } catch {
-    // ignore
-  }
-  return _getRawLocalFavorites()
+  } catch { /* ignore */ }
+  return { items: [], hasMore: false }
 }
 
 export async function addFavorite(vod) {
   if (!_currentUser) {
-    uni.showToast({ title: '请先登录', icon: 'none' })
-    return _getRawLocalFavorites()
+    _promptLogin()
+    return
   }
-
-  const cached = _getRawLocalFavorites()
-  if (cached.some((item) => item.vod_id === vod.vod_id)) return cached
-
-  const favTime = Date.now()
-  await supabase.from('favorites').insert({
-    user_id: _currentUser.id,
-    vod_id: vod.vod_id,
-    vod_name: vod.vod_name || '',
-    vod_pic: vod.vod_pic || '',
-    vod_remarks: vod.vod_remarks || '',
-    site_key: vod.site_key || '',
-    fav_time: favTime,
-  })
-
-  // 更新本地缓存
-  const updated = [{ vod_id: vod.vod_id, vod_name: vod.vod_name, vod_pic: vod.vod_pic, vod_remarks: vod.vod_remarks, site_key: vod.site_key, fav_time: favTime }, ...cached]
-  _setRawLocalFavorites(updated)
-  return updated
+  try {
+    await supabase.from('favorites').insert({
+      user_id: _currentUser.id,
+      vod_id: vod.vod_id,
+      vod_name: vod.vod_name || '',
+      vod_pic: vod.vod_pic || '',
+      vod_remarks: vod.vod_remarks || '',
+      site_key: vod.site_key || '',
+      fav_time: Date.now(),
+    })
+  } catch {
+    // 重复收藏或网络错误静默处理
+  }
 }
 
 export async function removeFavorite(vodId) {
-  if (_currentUser) {
-    await supabase.from('favorites').delete().eq('user_id', _currentUser.id).eq('vod_id', vodId)
+  if (!_currentUser) {
+    _promptLogin()
+    return
   }
-  const updated = _getRawLocalFavorites().filter((item) => item.vod_id !== vodId)
-  _setRawLocalFavorites(updated)
-  return updated
+  await supabase.from('favorites').delete().eq('user_id', _currentUser.id).eq('vod_id', vodId)
+}
+
+export async function clearFavorites() {
+  if (!_currentUser) {
+    _promptLogin()
+    return
+  }
+  await supabase.from('favorites').delete().eq('user_id', _currentUser.id)
 }
 
 export async function isFavorite(vodId) {
   if (!_currentUser) return false
-  return _getRawLocalFavorites().some((item) => item.vod_id === vodId)
+  try {
+    const { data } = await supabase
+      .from('favorites')
+      .select('vod_id')
+      .eq('user_id', _currentUser.id)
+      .eq('vod_id', vodId)
+      .limit(1)
+    return data && data.length > 0
+  } catch {
+    return false
+  }
 }
 
-// ==================== 历史记录 ====================
+// ==================== 历史记录（纯本地存储） ====================
 
-function _getRawLocalHistory() {
+export function getHistory() {
   try {
     return uni.getStorageSync(STORAGE_KEYS.HISTORY) || []
   } catch {
@@ -417,80 +395,12 @@ function _getRawLocalHistory() {
   }
 }
 
-function _setRawLocalHistory(list) {
-  try {
-    uni.setStorageSync(STORAGE_KEYS.HISTORY, list)
-  } catch {
-    // ignore
-  }
-}
-
-export async function getHistory() {
-  if (!_currentUser) return []
-
-  const cached = _getRawLocalHistory()
-  if (cached.length > 0) {
-    _refreshHistoryCache()
-  }
-  if (cached.length > 0) return cached
-
-  return _refreshHistoryCache()
-}
-
-async function _refreshHistoryCache() {
-  if (!_currentUser) return []
-  try {
-    const { data, error } = await supabase
-      .from('histories')
-      .select('*')
-      .order('view_time', { ascending: false })
-    if (!error && data) {
-      _setRawLocalHistory(data)
-      return data
-    }
-  } catch {
-    // ignore
-  }
-  return _getRawLocalHistory()
-}
-
-export async function addHistory(vod, episode = '', progress = 0) {
-  if (!_currentUser) {
-    // 未登录不存历史
-    return []
-  }
-
+export function addHistory(vod, episode = '', progress = 0) {
   const now = Date.now()
-
-  // 云端 upsert
-  const { data: existing } = await supabase
-    .from('histories')
-    .select('id')
-    .eq('user_id', _currentUser.id)
-    .eq('vod_id', vod.vod_id)
-    .limit(1)
-
-  if (existing && existing.length > 0) {
-    await supabase
-      .from('histories')
-      .update({ episode, progress, view_time: now })
-      .eq('id', existing[0].id)
-  } else {
-    await supabase.from('histories').insert({
-      user_id: _currentUser.id,
-      vod_id: vod.vod_id,
-      vod_name: vod.vod_name || '',
-      vod_pic: vod.vod_pic || '',
-      vod_remarks: vod.vod_remarks || '',
-      site_key: vod.site_key || '',
-      episode,
-      progress,
-      view_time: now,
-    })
-  }
-
-  // 更新本地缓存
-  let cached = _getRawLocalHistory()
+  let cached = []
+  try {
+    cached = uni.getStorageSync(STORAGE_KEYS.HISTORY) || []
+  } catch { /* ignore */ }
   cached = cached.filter((item) => item.vod_id !== vod.vod_id)
   cached.unshift({
     vod_id: vod.vod_id,
@@ -503,31 +413,30 @@ export async function addHistory(vod, episode = '', progress = 0) {
     view_time: now,
     time: now,
   })
-  _setRawLocalHistory(cached)
+  try {
+    uni.setStorageSync(STORAGE_KEYS.HISTORY, cached)
+  } catch { /* ignore */ }
   return cached
 }
 
-export async function removeHistoryItem(vodId, viewTime) {
-  if (_currentUser) {
-    await supabase
-      .from('histories')
-      .delete()
-      .eq('user_id', _currentUser.id)
-      .eq('vod_id', vodId)
-      .eq('view_time', viewTime)
-  }
-  const cached = _getRawLocalHistory().filter(
+export function removeHistoryItem(vodId, viewTime) {
+  let cached = []
+  try {
+    cached = uni.getStorageSync(STORAGE_KEYS.HISTORY) || []
+  } catch { /* ignore */ }
+  cached = cached.filter(
     (item) => !(item.vod_id === vodId && (item.view_time === viewTime || item.time === viewTime))
   )
-  _setRawLocalHistory(cached)
+  try {
+    uni.setStorageSync(STORAGE_KEYS.HISTORY, cached)
+  } catch { /* ignore */ }
   return cached
 }
 
-export async function clearHistory() {
-  if (_currentUser) {
-    await supabase.from('histories').delete().eq('user_id', _currentUser.id)
-  }
-  _setRawLocalHistory([])
+export function clearHistory() {
+  try {
+    uni.setStorageSync(STORAGE_KEYS.HISTORY, [])
+  } catch { /* ignore */ }
   return []
 }
 

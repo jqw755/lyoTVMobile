@@ -1,12 +1,12 @@
 <template>
-	<view class="page" :class="{ 'fullscreen-active': isFullscreen }">
+	<view class="page" :style="themeStyle" :class="{ 'fullscreen-active': isFullscreen }">
 		<!-- 播放器区域 -->
 		<view class="player-area" @tap="onPlayerTap">
 			<video id="live-player" :key="videoKey" :src="videoUrl" :autoplay="hasSource" :muted="muted"
 				:controls="isFullscreen" :page-gesture="true" :show-mute-btn="true" :enable-progress-gesture="false"
-				object-fit="contain" :title="currentChannelName" :enable-play-gesture="true" :vslide-gesture="false"
-				:vslide-gesture-in-fullscreen="false" :http-cache="false" play-btn-position="center"
-				:rate="playbackRate" style="width: 100%; height: 100%" @error="onVideoError"
+				object-fit="contain" :title="currentChannelName" :enable-play-gesture="true" :vslide-gesture="true"
+				:vslide-gesture-in-fullscreen="true" :mobilenet-hint-type="1" :http-cache="false" :is-live="true"
+				play-btn-position="center" :rate="playbackRate" style="width: 100%; height: 100%" @error="onVideoError"
 				@fullscreenchange="onFullscreenChange" @play="onPlay" @pause="onPause" />
 
 			<!-- 频道信息浮层（非全屏时显示在播放器上方） -->
@@ -43,7 +43,8 @@
 
 			<!-- 分组为空提示 -->
 			<view class="empty-hint" v-if="groups.length === 0 && !loading">
-				<text class="empty-text">暂无卫视数据，请先在"我的"页面设置订阅源</text>
+				<text class="empty-text" v-if="!store.subUrl">请先在"我的"页面设置订阅源</text>
+				<text class="empty-text" v-else>{{ errorMsg || '未解析到卫视分组，请检查订阅源是否包含 lives 字段' }}</text>
 			</view>
 
 			<!-- 频道列表 -->
@@ -52,7 +53,7 @@
 					:class="{ playing: isPlaying(ch) }" @tap="switchChannel(ch)">
 					<view class="channel-left">
 						<image class="channel-logo" v-if="ch.logo" :src="ch.logo" mode="aspectFit" />
-						<text class="channel-num" v-if="ch.number">{{ ch.number }}</text>
+						<view v-else class="channel-logo"></view>
 						<text class="channel-name">{{ ch.displayName || ch.name }}</text>
 					</view>
 					<view class="channel-right">
@@ -60,7 +61,6 @@
 							@tap.stop="switchLine(ch)">
 							源{{ (ch.currentLine || 0) + 1 }}/{{ ch.urls.length }}
 						</text>
-						<uni-icons v-if="isPlaying(ch)" type="checkmarkempty" size="18" color="#fe8027" />
 					</view>
 				</view>
 				<uni-load-more :status="loadMoreStatus" />
@@ -107,6 +107,9 @@
 		nextTick
 	} from 'vue'
 	import {
+		themeStyle
+	} from '@/utils/theme.js'
+	import {
 		onShow,
 		onHide
 	} from '@dcloudio/uni-app'
@@ -114,6 +117,7 @@
 		store
 	} from '@/utils/appState.js'
 	import {
+		liveInit,
 		liveGetGroups,
 		liveGetChannels,
 		liveGetUrl
@@ -189,22 +193,42 @@
 		initLive()
 	}
 
+	// ===== 调试日志 =====
+	const TAG = '[LiveDebug]'
+
 	// ===== 初始化 =====
 	async function initLive() {
+		console.log(TAG, 'initLive called, subUrl:', store.subUrl)
 		if (!store.subUrl) {
+			console.log(TAG, 'initLive: 无subUrl，跳过')
 			loading.value = false
 			return
 		}
 		loading.value = true
 		errorMsg.value = ''
 		try {
+			// 主动初始化直播订阅源（不依赖 App.vue initApp 的时序，避免静默失败）
+			try {
+				console.log(TAG, 'initLive: 调用 liveInit...')
+				const initRet = await liveInit(store.subUrl)
+				console.log(TAG, 'initLive: liveInit 返回:', JSON.stringify(initRet))
+			} catch (e) {
+				console.warn(TAG, 'initLive: liveInit 失败:', e.message)
+				errorMsg.value = '直播订阅初始化失败: ' + (e.message || '')
+			}
+			console.log(TAG, 'initLive: 调用 liveGetGroups...')
 			const gList = await liveGetGroups()
+			console.log(TAG, 'initLive: liveGetGroups 返回:', JSON.stringify(gList))
 			groups.value = gList || []
 			if (groups.value.length > 0) {
+				console.log(TAG, 'initLive: 分组列表:', groups.value.map(g => g.name).join(', '))
 				await switchGroup(groups.value[0].name)
+			} else {
+				console.log(TAG, 'initLive: 分组为空')
 			}
 			isInitialized = true
 		} catch (e) {
+			console.error(TAG, 'initLive 异常:', e.message, e.stack)
 			errorMsg.value = '加载卫视数据失败: ' + (e.message || '')
 		} finally {
 			loading.value = false
@@ -214,22 +238,33 @@
 	// ===== 分组切换 =====
 	async function switchGroup(name) {
 		if (!name) return
+		console.log(TAG, 'switchGroup:', name)
 		// 相同分组且有缓存时跳过
-		if (name === currentGroup.value && channels.value.length > 0) return
+		if (name === currentGroup.value && channels.value.length > 0) {
+			console.log(TAG, 'switchGroup: 命中缓存，跳过')
+			return
+		}
 		currentGroup.value = name
 		loading.value = true
 		errorMsg.value = ''
 		// 先检查缓存
 		if (channelList[name]) {
+			console.log(TAG, 'switchGroup: 内存缓存命中', name, '频道数:', channelList[name].length)
 			channels.value = channelList[name]
 			loading.value = false
 			return
 		}
 		try {
+			console.log(TAG, 'switchGroup: 调用 liveGetChannels', name)
 			const chList = await liveGetChannels(name)
+			console.log(TAG, 'switchGroup: liveGetChannels 返回', chList ? chList.length : 0, '条')
+			if (chList && chList.length > 0) {
+				console.log(TAG, 'switchGroup: 第一个频道:', JSON.stringify(chList[0]))
+			}
 			channelList[name] = chList || []
 			channels.value = channelList[name]
 		} catch (e) {
+			console.error(TAG, 'switchGroup 异常:', e.message, e.stack)
 			errorMsg.value = '加载频道列表失败'
 		} finally {
 			loading.value = false
@@ -239,27 +274,38 @@
 	// ===== 频道切换 =====
 	async function switchChannel(ch) {
 		if (!ch || !ch.name) return
-		if (ch.name === currentChannel.value?.name && hasSource.value) return
+		console.log(TAG, 'switchChannel:', ch.name, 'group:', currentGroup.value, 'line:', ch.currentLine || 0)
+		if (ch.name === currentChannel.value?.name && hasSource.value) {
+			console.log(TAG, 'switchChannel: 相同频道，跳过')
+			return
+		}
 		currentChannel.value = ch
 		currentLine.value = ch.currentLine || 0
 		lineCount.value = (ch.urls && ch.urls.length) || 1
+		console.log(TAG, 'switchChannel: 线路数:', lineCount.value, 'urls:', ch.urls ? ch.urls.join(',') : '无')
 		hasSource.value = false
 		videoUrl.value = ''
 		loading.value = true
 		errorMsg.value = ''
 		try {
+			console.log(TAG, 'switchChannel: 调用 liveGetUrl', ch.name, currentGroup.value, currentLine.value)
 			const result = await liveGetUrl(ch.name, currentGroup.value, currentLine.value)
+			console.log(TAG, 'switchChannel: liveGetUrl 返回:', JSON.stringify(result))
 			if (result && result.url) {
+				console.log(TAG, 'switchChannel: 播放地址:', result.url)
 				videoKey.value++
 				videoUrl.value = result.url
 				hasSource.value = true
 			} else {
+				console.warn(TAG, 'switchChannel: 未获取到播放地址')
 				errorMsg.value = '未获取到播放地址'
 			}
 		} catch (e) {
+			console.error(TAG, 'switchChannel 异常:', e.message, e.stack)
 			errorMsg.value = e.message || '获取播放地址失败'
 			// 尝试降级到下一线路
 			if (lineCount.value > 1) {
+				console.log(TAG, 'switchChannel: 尝试自动切线路')
 				tryAutoSwitchLine()
 			}
 		} finally {
@@ -562,14 +608,15 @@
 		border-radius: 12rpx;
 		background: var(--card);
 		transition: all 0.15s;
+		border-left: 6rpx solid transparent;
 
 		&:active {
-			opacity: 0.7;
+			opacity: 0.8;
 		}
 
 		&.playing {
 			background: rgba(231, 76, 60, 0.08);
-			border-left: 4rpx solid var(--accent);
+			border-left: 6rpx solid var(--accent);
 		}
 	}
 

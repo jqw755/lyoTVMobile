@@ -26,11 +26,10 @@
 
 <style lang="scss" scoped>
 	.nav-wrapper {
-		padding: 12rpx 0;
-		background: var(--bg-primary);
-		position: sticky;
-		top: 0;
-		z-index: 10;
+	 padding: 12rpx 0;
+	 position: sticky;
+	 top: 0;
+	 z-index: 10;
 	}
 
 	.category-nav {

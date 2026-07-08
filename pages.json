@@ -28,7 +28,7 @@
 		{
 			"path": "pages/search/search",
 			"style": {
-				"navigationBarTitleText": "搜索",
+				"navigationStyle": "custom",
 				"backgroundColorContent": "#141414"
 			}
 		},
@@ -85,20 +85,20 @@
 		"list": [{
 				"pagePath": "pages/index/index",
 				"text": "首页",
-				"iconPath": "static/tabbar/home.png?v=1",
-				"selectedIconPath": "static/tabbar/home_sel.png?v=1"
+				"iconPath": "static/tabbar/home.png?v=2",
+				"selectedIconPath": "static/tabbar/home_sel.png?v=2"
 			},
 			{
 				"pagePath": "pages/live/live",
 				"text": "卫视",
-				"iconPath": "static/tabbar/live.png?v=1",
-				"selectedIconPath": "static/tabbar/live_sel.png?v=1"
+				"iconPath": "static/tabbar/live.png?v=2",
+				"selectedIconPath": "static/tabbar/live_sel.png?v=2"
 			},
 			{
 				"pagePath": "pages/mine/mine",
 				"text": "我的",
-				"iconPath": "static/tabbar/mine.png?v=1",
-				"selectedIconPath": "static/tabbar/mine_sel.png?v=1"
+				"iconPath": "static/tabbar/mine.png?v=2",
+				"selectedIconPath": "static/tabbar/mine_sel.png?v=2"
 			}
 		]
 	},

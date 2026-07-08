@@ -1,18 +1,22 @@
 <template>
-	<view class="page">
-		<!-- 自定义标题栏 -->
-		<view class="title-bar">
-			<text class="title-bar-logo">乐意欧TV</text>
-			<view class="title-bar-icons">
-				<uni-icons type="search" size="26" color="#888" @tap="goSearch" />
-				<uni-icons type="star" size="27" color="#888" @tap="goFav" />
-				<img src="../../static/image/icon_history.png" alt="" width="24rpx" @tap="goHistory" />
+	<view class="page" :style="themeStyle">
+		<!-- 顶部背景区域（动态状态栏间距 + 影视背景图） -->
+		<view class="header-bg" :style="{ paddingTop: statusBarHeight + 'px' }">
+			<!-- 自定义标题栏 -->
+			<view class="title-bar">
+				<text class="title-bar-logo">乐意欧TV</text>
+				<view class="title-bar-icons">
+					<uni-icons type="search" size="26" color="#888" @tap="goSearch" />
+					<uni-icons type="star" size="27" color="#888" @tap="goFav" />
+					<image class="title-bar-history" src="/static/image/icon_history.png" mode="aspectFit"
+						@tap="goHistory" />
+				</view>
 			</view>
-		</view>
 
-		<!-- 顶部固定区域：分类导航 -->
-		<view class="header">
-			<category-nav :list="tabList" :activeId="activeTid" @change="onCategoryChange" />
+			<!-- 顶部固定区域：分类导航 -->
+			<view class="header">
+				<category-nav :list="tabList" :activeId="activeTid" @change="onCategoryChange" />
+			</view>
 		</view>
 
 		<!-- 底部悬浮回到顶部按钮 -->
@@ -63,6 +67,9 @@
 		watch
 	} from 'vue'
 	import {
+		themeStyle
+	} from '@/utils/theme.js'
+	import {
 		home,
 		category
 	} from '@/utils/api.js'
@@ -75,6 +82,13 @@
 		updateHome
 	} from '@/utils/appState.js'
 	import CategoryNav from '@/components/category-nav.vue'
+	import {
+		useStatusBar
+	} from '@/utils/useStatusBar.js'
+
+	const {
+		statusBarHeight
+	} = useStatusBar()
 
 	const RECOMMEND_TAB = {
 		type_id: '',
@@ -94,7 +108,7 @@
 	const gridCols = ref(4)
 
 	function loadGridCols() {
-	 gridCols.value = getSetting('grid_cols', 4)
+		gridCols.value = getSetting('grid_cols', 4)
 	}
 	loadGridCols()
 	uni.$on('gridColsChanged', (val) => {
@@ -127,6 +141,12 @@
 			return
 		}
 		loadHome()
+	})
+
+	// App.vue 的 initApp() 是异步的，重启时首页 onMounted 可能先于插件就绪。
+	// 监听 appReady 事件：插件初始化完成后通知首页拉取数据。
+	uni.$on('appReady', () => {
+		if (store.homeList.length === 0) loadHome()
 	})
 
 	async function loadHome() {
@@ -165,15 +185,19 @@
 			return
 		}
 
+		loadingMore.value = true
 		try {
 			const data = await category(item.type_id, 1)
 			list.value = data.list || []
 			if ((data.list || []).length === 0) noMore.value = true
 		} catch (e) {
 			uni.showToast({
-				title: '加载失败',
-				icon: 'none'
+				title: '加载失败: ' + (e?.message || ''),
+				icon: 'none',
+				duration: 2000,
 			})
+		} finally {
+			loadingMore.value = false
 		}
 	}
 
@@ -247,16 +271,27 @@
 
 <style lang="scss" scoped>
 	.page {
-	 height: 100vh;
-	 display: flex;
-	 flex-direction: column;
-	 background: var(--bg-primary);
-	 overflow-x: hidden;
+		height: 100vh;
+		display: flex;
+		flex-direction: column;
+		background: var(--bg-primary);
+		overflow-x: hidden;
+		padding-top: 10rpx;
+	}
+
+	/* 顶部背景区域（深色渐变，模拟影院氛围） */
+	.header-bg {
+		flex-shrink: 0;
+		position: relative;
+		z-index: 1;
+		background:
+			radial-gradient(ellipse at 50% 0%, rgba(254, 128, 39, 0.18) 0%, transparent 85%),
+			linear-gradient(180deg, var(--gradient-from) 0%, var(--gradient-to) 80%);
+		background-color: var(--bg-primary);
 	}
 
 	.header {
 		flex-shrink: 0;
-		background: var(--bg-primary);
 		z-index: 10;
 		padding-bottom: 4rpx;
 	}
@@ -266,12 +301,13 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 42rpx 24rpx 28rpx;
+		padding: 10rpx 24rpx 28rpx;
 		flex-shrink: 0;
 	}
 
 	.title-bar-logo {
 		font-size: 44rpx;
+		font-weight: bolder;
 		font-weight: var(--weight-bold);
 		color: var(--text-primary);
 		letter-spacing: var(--tracking-wide);
@@ -281,6 +317,11 @@
 		display: flex;
 		align-items: center;
 		gap: 36rpx;
+	}
+
+	.title-bar-history {
+		width: 26px;
+		height: 26px;
 	}
 
 	/* 底部悬浮回到顶部按钮 */
@@ -314,7 +355,8 @@
 	.grid {
 		display: flex;
 		flex-wrap: wrap;
-		padding: 0 12rpx;
+		justify-content: center;
+		padding: 0 24rpx;
 	}
 
 	.grid-item {
@@ -322,8 +364,12 @@
 		padding: 6rpx;
 	}
 
+	.cols-3 {
+		gap: 18rpx;
+	}
+
 	.cols-3 .grid-item {
-		width: 33.3333%;
+		width: 30%;
 	}
 
 	.cols-4 .grid-item {
@@ -335,14 +381,14 @@
 	}
 
 	.grid-card {
-		border-radius: 12rpx;
+		border-radius: 14rpx;
 		overflow: hidden;
 		background: var(--card);
 		box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.08);
 		transition: transform 0.2s;
 
 		&:active {
-			transform: scale(0.96);
+			transform: scale(0.98);
 		}
 	}
 

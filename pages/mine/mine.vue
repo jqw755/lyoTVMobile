@@ -1,16 +1,19 @@
 <template>
-	<view class="page">
-		<!-- 用户头部 -->
-		<view class="profile">
-			<view class="avatar" @tap="loggedIn ? showAvatarPicker = true : onProfileTap()">
-				<text class="avatar-emoji">{{ displayAvatar }}</text>
-			</view>
-			<view class="profile-info" @tap="loggedIn ? openProfileEditor() : onProfileTap()">
-				<text class="name">{{ loggedIn ? (profile?.nickname || '用户') : '点击登录' }}</text>
-				<text class="bio">{{ loggedIn ? bioText : '登录后同步收藏和历史到云端' }}</text>
-			</view>
-			<view class="profile-arrow" v-if="loggedIn" @tap="openProfileEditor()">
-				<uni-icons type="arrowright" size="16" color="#555" />
+	<view class="page" :style="themeStyle">
+		<!-- 顶部背景区域（状态栏间距 + 影视背景图） -->
+		<view class="header-bg" :style="{ paddingTop: statusBarHeight + 'px' }">
+			<!-- 用户头部 -->
+			<view class="profile">
+				<view class="avatar" @tap="loggedIn ? showAvatarPicker = true : onProfileTap()">
+					<text class="avatar-emoji">{{ displayAvatar }}</text>
+				</view>
+				<view class="profile-info" @tap="loggedIn ? openProfileEditor() : onProfileTap()">
+					<text class="name">{{ loggedIn ? (profile?.nickname || '用户') : '点击登录' }}</text>
+					<text class="introduction">{{ loggedIn ? introductionText : '登录后同步收藏和历史到云端' }}</text>
+				</view>
+				<view class="profile-arrow" v-if="loggedIn" @tap="openProfileEditor()">
+					<uni-icons type="arrowright" size="16" color="#555" />
+				</view>
 			</view>
 		</view>
 
@@ -40,29 +43,33 @@
 				<view class="editor-form">
 					<view class="editor-field">
 						<text class="editor-label">昵称</text>
-						<input class="editor-input" v-model="editNickname" placeholder="输入昵称" maxlength="20" />
+						<input class="editor-input" v-model="editNickname" placeholder="输入昵称" maxlength="10" />
 					</view>
 					<view class="editor-field">
 						<text class="editor-label">简介</text>
-						<input class="editor-input" v-model="editBio" placeholder="一句话介绍自己" maxlength="50" />
+						<input class="editor-input" v-model="editIntro" placeholder="介绍自己" maxlength="20" />
 					</view>
-					<text class="editor-btn" @tap="saveProfile">保存</text>
+					<text v-if="!saveLoading" class="editor-btn" @tap="saveProfile">保存</text>
+					<text v-else class="editor-btn loading-btn">
+						<uni-icons type="spinner-cycle" size="16" color="#fff" />
+						<text>保存中...</text>
+					</text>
 				</view>
 			</view>
 		</view>
 
-		<!-- 统计卡片（我的收藏 / 观看历史 / 下载） -->
+		<!-- 功能卡片（纯图标入口，点击跳转详情页） -->
 		<view class="stats-row">
 			<view class="stat-card" @tap="goPage('favorite')">
-				<text class="stat-count">{{ favCount }}</text>
+				<uni-icons type="star-filled" size="32" color="#888" />
 				<text class="stat-label">我的收藏</text>
 			</view>
 			<view class="stat-card" @tap="goPage('history')">
-				<text class="stat-count">{{ historyCount }}</text>
+				<uni-icons type="clock-filled" size="32" color="#888" />
 				<text class="stat-label">观看历史</text>
 			</view>
 			<view class="stat-card">
-				<text class="stat-count">0</text>
+				<uni-icons type="download-filled" size="32" color="#888" />
 				<text class="stat-label">我的下载</text>
 			</view>
 		</view>
@@ -70,16 +77,17 @@
 		<!-- 订阅源设置 -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="link" size="17" color="#888" />
+				<uni-icons type="link" size="18" color="#888" />
 				<text class="section-title">订阅源</text>
 			</view>
 			<view class="sub-input">
-				<input v-model="subUrl" placeholder="输入订阅地址（JSON URL）" placeholder-class="placeholder" maxlength="50" />
+				<input v-model="subUrl" placeholder="输入订阅地址（JSON URL）" placeholder-class="placeholder"
+					maxlength="100" />
 				<uni-icons v-if="subUrl" type="closeempty" size="17" color="#999" class="sub-clear-icon"
 					@tap="subUrl = ''" />
 				<text class="sub-btn" @tap="submitSub">确定</text>
 			</view>
-			<view v-if="store.subUrl && !subUrl" class="sub-hint">
+			<view v-if="store.subUrl" class="sub-hint">
 				<text class="sub-hint-text">当前订阅源：{{ store.subUrl }}</text>
 				<text class="sub-copy-btn" @tap="copySubUrl">复制</text>
 			</view>
@@ -92,7 +100,7 @@
 		<!-- 首页布局 -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="image-filled" size="16" color="#888" />
+				<uni-icons type="image-filled" size="18" color="#888" />
 				<text class="section-title">首页布局</text>
 			</view>
 			<view class="img-size-options">
@@ -107,7 +115,7 @@
 		<!-- 显示主题（深色/浅色） -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="color-filled" size="16" color="#888" />
+				<uni-icons type="color-filled" size="18" color="#888" />
 				<text class="section-title">显示主题</text>
 			</view>
 			<view class="setting-item">
@@ -121,7 +129,7 @@
 		<!-- 播放设置 -->
 		<view class="section">
 			<view class="section-header">
-				<uni-icons type="videocam-filled" size="16" color="#888" />
+				<uni-icons type="videocam-filled" size="18" color="#888" />
 				<text class="section-title">播放设置</text>
 			</view>
 			<view class="setting-item">
@@ -147,7 +155,7 @@
 		<view class="section">
 			<view class="setting-item" @tap="clearCache">
 				<view class="setting-item-left no-indent">
-					<uni-icons type="trash-filled" size="16" color="#888" />
+					<uni-icons type="trash-filled" size="18" color="#888" />
 					<text class="setting-item-label">清除缓存</text>
 				</view>
 				<view class="setting-item-right">
@@ -159,7 +167,7 @@
 
 		<!-- 关于 -->
 		<view class="about">
-			<text class="version">乐意欧TV v1.0.10</text>
+			<text class="version">乐意欧TV v1.0.14</text>
 		</view>
 	</view>
 </template>
@@ -168,7 +176,8 @@
 	import {
 		ref,
 		computed,
-		onMounted
+		onMounted,
+		onUnmounted
 	} from 'vue'
 	import {
 		store,
@@ -183,8 +192,6 @@
 		liveInit
 	} from '@/utils/api.js'
 	import {
-		getFavorites,
-		getHistory,
 		getSetting,
 		setSetting,
 		getSubHistory,
@@ -195,6 +202,18 @@
 		updateProfile,
 		logout as cloudLogout,
 	} from '@/utils/store.js'
+	import {
+		theme,
+		themeStyle,
+		setTheme as applyThemeChange
+	} from '@/utils/theme.js'
+	import {
+		useStatusBar
+	} from '@/utils/useStatusBar.js'
+
+	const {
+		statusBarHeight
+	} = useStatusBar()
 
 	const subUrl = ref('')
 	const colOptions = [{
@@ -211,7 +230,6 @@
 		},
 	]
 	const currentCols = ref(3)
-	const theme = ref('dark')
 	const muted = ref(true)
 	const longPressSpeed = ref(2)
 	const speedOptions = [{
@@ -235,6 +253,7 @@
 	]
 	const showAvatarPicker = ref(false)
 	const selectedAvatar = ref('')
+	const avatarLoading = ref(false)
 
 	const displayAvatar = computed(() => {
 		return selectedAvatar.value || profile.value?.avatar_url || '🐱'
@@ -243,17 +262,16 @@
 	// ===== 个人资料 =====
 	const showProfileEditor = ref(false)
 	const editNickname = ref('')
-	const editBio = ref('')
+	const editIntro = ref('')
+	const saveLoading = ref(false)
 
-	const bioText = computed(() => {
-		return profile.value?.preferences?.bio || '观看精彩影视'
+	const introductionText = computed(() => {
+		return profile.value?.introduction || '观看精彩影视'
 	})
 
 	// ===== 用户登录态 =====
 	const loggedIn = ref(false)
 	const profile = ref(null)
-	const favCount = ref(0)
-	const historyCount = ref(0)
 
 	async function loadUserState() {
 		const user = getCurrentUser()
@@ -261,22 +279,6 @@
 		if (user) {
 			profile.value = getProfile()
 			selectedAvatar.value = profile.value?.avatar_url || ''
-		}
-		await refreshCounts()
-	}
-
-	async function refreshCounts() {
-		try {
-			const favs = await getFavorites()
-			favCount.value = favs.length
-		} catch {
-			favCount.value = 0
-		}
-		try {
-			const hist = await getHistory()
-			historyCount.value = hist.length
-		} catch {
-			historyCount.value = 0
 		}
 	}
 
@@ -296,18 +298,22 @@
 	}
 
 	async function doLogout() {
+		uni.showLoading({
+			title: '退出中...',
+			mask: true
+		})
 		try {
 			await cloudLogout()
 			loggedIn.value = false
 			profile.value = null
 			selectedAvatar.value = ''
-			favCount.value = 0
-			historyCount.value = 0
+			uni.hideLoading()
 			uni.showToast({
 				title: '已退出',
 				icon: 'success'
 			})
 		} catch (e) {
+			uni.hideLoading()
 			uni.showToast({
 				title: '退出失败',
 				icon: 'none'
@@ -316,6 +322,8 @@
 	}
 
 	async function selectAvatar(emoji) {
+		if (avatarLoading.value) return
+		avatarLoading.value = true
 		try {
 			await updateProfile({
 				avatar_url: emoji
@@ -331,13 +339,15 @@
 				title: '保存失败',
 				icon: 'none'
 			})
+		} finally {
+			avatarLoading.value = false
 		}
 	}
 
 	// ===== 个人资料编辑 =====
 	function openProfileEditor() {
 		editNickname.value = profile.value?.nickname || ''
-		editBio.value = profile.value?.preferences?.bio || ''
+		editIntro.value = profile.value?.introduction || ''
 		showProfileEditor.value = true
 	}
 
@@ -347,7 +357,7 @@
 
 	async function saveProfile() {
 		const nickname = editNickname.value.trim()
-		const bio = editBio.value.trim()
+		const introduction = editIntro.value.trim()
 		if (!nickname) {
 			uni.showToast({
 				title: '昵称不能为空',
@@ -355,23 +365,19 @@
 			})
 			return
 		}
+		if (saveLoading.value) return
+		saveLoading.value = true
 		try {
 			await updateProfile({
 				nickname,
-				preferences: {
-					...(profile.value?.preferences || {}),
-					bio
-				}
+				introduction
 			})
 			// 更新本地 profile
 			if (profile.value) {
 				profile.value = {
 					...profile.value,
 					nickname,
-					preferences: {
-						...(profile.value.preferences || {}),
-						bio
-					}
+					introduction
 				}
 			}
 			showProfileEditor.value = false
@@ -384,30 +390,29 @@
 				title: '保存失败',
 				icon: 'none'
 			})
+		} finally {
+			saveLoading.value = false
 		}
 	}
 
 	onMounted(() => {
 		// 图片列数（从云端偏好读取）
 		currentCols.value = getSetting('grid_cols', 3)
-		// 主题（从云端偏好读取）
-		theme.value = getSetting('theme', 'dark')
+		// 主题：theme ref 已由 App.vue initTheme() 初始化，这里无需重复赋值
 		// 静音播放
 		muted.value = getSetting('video_muted', true)
 		// 长按倍速
 		longPressSpeed.value = getSetting('long_press_speed', 2)
 		// 缓存大小
 		calcCacheSize()
-		// 加载用户状态
+		// 加载用户状态（初始加载一次，后续登录/退出由事件驱动）
 		loadUserState()
+		// 监听登录/退出事件更新 UI（无需每次切 tab 都刷新）
+		uni.$on('preferencesLoaded', () => loadUserState())
 	})
 
-	// 每次切到 tab 都刷新
-	import {
-		onShow
-	} from '@dcloudio/uni-app'
-	onShow(() => {
-		loadUserState()
+	onUnmounted(() => {
+		uni.$off('preferencesLoaded')
 	})
 
 	/* ========== 缓存计算 ========== */
@@ -490,13 +495,7 @@
 
 	/* ========== 显示主题（深色/浅色） ========== */
 	function onThemeChange(e) {
-		setTheme(e.detail.value ? 'dark' : 'light')
-	}
-
-	function setTheme(val) {
-		theme.value = val
-		setSetting('theme', val)
-		uni.$emit('themeChange', val)
+		applyThemeChange(e.detail.value ? 'dark' : 'light')
 	}
 
 	function setImgSize(cols) {
@@ -592,15 +591,25 @@
 <style lang="scss" scoped>
 	.page {
 		min-height: 100vh;
+		overflow-y: auto;
 		background: var(--bg-primary);
 		padding-bottom: 20rpx;
+		padding-top: 10rpx;
+	}
+
+	/* 顶部背景区域（深色渐变，模拟影院氛围） */
+	.header-bg {
+		background:
+			radial-gradient(ellipse at 50% 0%, rgba(254, 128, 39, 0.18) 0%, transparent 85%),
+			linear-gradient(180deg, var(--gradient-from) 0%, var(--gradient-to) 65%);
+		background-color: var(--bg-primary);
 	}
 
 	/* ========== 用户头部 ========== */
 	.profile {
 		display: flex;
 		align-items: center;
-		padding: 50rpx 24rpx 28rpx;
+		padding: 10rpx 24rpx 28rpx;
 		gap: 16rpx;
 
 		.avatar {
@@ -631,7 +640,7 @@
 				color: var(--text-primary);
 			}
 
-			.bio {
+			.introduction {
 				font-size: 22rpx;
 				color: var(--text-secondary);
 			}
@@ -653,7 +662,7 @@
 	}
 
 	.avatar-picker {
-		background: var(--card);
+		background: var(--card, #1e1e1e);
 		border-radius: 24rpx;
 		padding: 32rpx;
 		width: 560rpx;
@@ -670,7 +679,7 @@
 		.picker-title {
 			font-size: 32rpx;
 			font-weight: var(--weight-semibold);
-			color: var(--text-primary);
+			color: var(--text-primary, #ffffff);
 		}
 
 		.picker-close {
@@ -718,7 +727,7 @@
 
 	/* ========== 个人资料编辑弹窗 ========== */
 	.profile-editor {
-		background: var(--card);
+		background: var(--card, #1e1e1e);
 		border-radius: 24rpx;
 		padding: 32rpx;
 		width: 560rpx;
@@ -760,6 +769,14 @@
 		font-size: 28rpx;
 		font-weight: var(--weight-semibold);
 		margin-top: 8rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8rpx;
+
+		&.loading-btn {
+			opacity: 0.7;
+		}
 
 		&:active {
 			opacity: 0.85;
@@ -777,20 +794,14 @@
 		flex: 1;
 		background: var(--card);
 		border-radius: 16rpx;
-		padding: 20rpx 0;
+		padding: 24rpx 0;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 4rpx;
+		gap: 10rpx;
 
 		&:active {
 			opacity: 0.7;
-		}
-
-		.stat-count {
-			font-size: var(--text-xl);
-			font-weight: var(--weight-bold);
-			color: var(--text-primary);
 		}
 
 		.stat-label {
@@ -933,7 +944,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		font-size: 20rpx;
+		font-size: 24rpx;
 		color: var(--text-secondary);
 		margin-top: 10rpx;
 		gap: 12rpx;
@@ -941,6 +952,7 @@
 		&-text {
 			flex: 1;
 			word-break: break-all;
+			margin-left: 8rpx;
 		}
 	}
 

@@ -1,14 +1,18 @@
 <template>
-	<view class="page">
-		<!-- 顶部自定义导航栏 -->
-		<view class="nav-bar">
-			<view class="nav-search">
-				<uni-icons type="search" size="18" color="#888" />
-				<input v-model="keyword" placeholder="搜索影片" maxlength="20" placeholder-class="nav-placeholder"
-					confirm-type="search" @confirm="doSearch" />
-				<text v-if="keyword" class="nav-clear" @tap="clearKeyword">✕</text>
+	<view class="page" :style="themeStyle">
+		<!-- 顶部背景区域（状态栏间距 + 影视背景图） -->
+		<view class="header-bg" :style="{ paddingTop: statusBarHeight + 'px' }">
+			<!-- 顶部自定义导航栏 -->
+			<view class="nav-bar">
+				<uni-icons type="left" size="22" color="#888" class="nav-back" @tap="goBack" />
+				<view class="nav-search">
+					<uni-icons type="search" size="18" color="#888" />
+					<input v-model="keyword" placeholder="搜索影片" maxlength="20" placeholder-class="nav-placeholder"
+						confirm-type="search" @confirm="doSearch" />
+					<text v-if="keyword" class="nav-clear" @tap="clearKeyword">✕</text>
+				</view>
+				<text class="nav-btn" @tap="doSearch">搜索</text>
 			</view>
-			<text class="nav-btn" @tap="doSearch">搜索</text>
 		</view>
 
 		<!-- 搜索前：热门搜索 + 历史 -->
@@ -96,6 +100,9 @@
 		watch
 	} from 'vue'
 	import {
+		themeStyle
+	} from '@/utils/theme.js'
+	import {
 		searchSite
 	} from '@/utils/api.js'
 	import {
@@ -104,6 +111,13 @@
 	import {
 		store
 	} from '@/utils/appState.js'
+	import {
+		useStatusBar
+	} from '@/utils/useStatusBar.js'
+
+	const {
+		statusBarHeight
+	} = useStatusBar()
 
 	const keyword = ref('')
 	const searched = ref(false)
@@ -253,6 +267,10 @@
 		searched.value = false
 	}
 
+	function goBack() {
+		uni.navigateBack()
+	}
+
 	// 手动清空输入内容时恢复初始状态
 	watch(keyword, (val) => {
 		if (!val) searched.value = false
@@ -276,6 +294,16 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--bg-primary);
+		padding-top: 10rpx;
+	}
+
+	/* ========== 背景区域（深色渐变） ========== */
+	.header-bg {
+		flex-shrink: 0;
+		background:
+			radial-gradient(ellipse at 50% 0%, rgba(254, 128, 39, 0.15) 0%, transparent 85%),
+			linear-gradient(180deg, var(--gradient-from) 0%, var(--gradient-to) 65%);
+		background-color: var(--bg-primary);
 	}
 
 	/* ========== 顶栏 ========== */
@@ -283,7 +311,16 @@
 		display: flex;
 		align-items: center;
 		gap: 12rpx;
-		padding: 30rpx 16rpx;
+		padding: 6rpx 16rpx 16rpx;
+	}
+
+	.nav-back {
+		padding: 8rpx 4rpx;
+		flex-shrink: 0;
+
+		&:active {
+			opacity: 0.6;
+		}
 	}
 
 	.nav-search {
@@ -291,7 +328,8 @@
 		display: flex;
 		align-items: center;
 		gap: 10rpx;
-		background: var(--card);
+		background: rgba(30, 30, 30, 0.65);
+		backdrop-filter: blur(8px);
 		border-radius: 40rpx;
 		padding: 4rpx 20rpx;
 		height: 64rpx;

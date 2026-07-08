@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page" :style="themeStyle">
 		<view class="header">
 			<text class="title">登录</text>
 			<text class="subtitle">登录后收藏和历史将同步到云端</text>
@@ -35,6 +35,7 @@
 	import {
 		ref
 	} from 'vue'
+	import { themeStyle } from '@/utils/theme.js'
 	import {
 		login
 	} from '@/utils/store.js'
@@ -60,9 +61,14 @@
 				title: '登录成功',
 				icon: 'success'
 			})
-			setTimeout(() => uni.switchTab({
-				url: '/pages/mine/mine'
-			}), 500)
+			setTimeout(() => {
+			  const pages = getCurrentPages()
+			  if (pages.length <= 1) {
+			   uni.switchTab({ url: '/pages/mine/mine' })
+			  } else {
+			   uni.navigateBack()
+			  }
+			 }, 500)
 		} catch (e) {
 			uni.showToast({
 				title: e.message || '登录失败',
