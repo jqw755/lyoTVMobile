@@ -18,7 +18,7 @@ function _notifyAuthListeners(event, session) {
 		try {
 			cb(event, session)
 		} catch (e) {
-			console.warn('[supabase] auth listener error:', e)
+			// ignore
 		}
 	})
 }

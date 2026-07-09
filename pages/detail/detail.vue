@@ -137,7 +137,7 @@
 	 getSetting,
 	} from "@/utils/store.js";
 	import {
-		store
+	 store
 	} from "@/utils/appState.js";
 
 	const COLLAPSE_LIMIT = 30;
@@ -248,18 +248,21 @@
 	});
 
 	async function loadDetail() {
-		if (!pageId) return;
-		loading.value = true;
-		error.value = false;
-		errorMsg.value = "";
-		try {
-			const data = await detail(pageId, pageKey);
-			const item = data.list?.[0] || data.vod;
-			if (!item || !item.vod_name) {
-				error.value = true;
-				errorMsg.value = "未获取到影片信息";
-				return;
-			}
+	 if (!pageId) return;
+	 loading.value = true;
+	 error.value = false;
+	 errorMsg.value = "";
+	 try {
+	  let data;
+
+	  data = await detail(pageId, pageKey);
+
+	  const item = data.list?.[0] || data.vod;
+	  if (!item) {
+	   error.value = true;
+	   errorMsg.value = "未获取到影片信息";
+	   return;
+	  }
 			vod.value = item;
 			uni.setNavigationBarTitle({
 				title: item.vod_name

@@ -17,6 +17,121 @@
 			</view>
 		</view>
 
+		<view class="scroll-body">
+
+			<!-- 功能卡片（纯图标入口，点击跳转详情页） -->
+			<view class="stats-row">
+				<view class="stat-card" @tap="goPage('favorite')">
+					<uni-icons type="star" size="32" color="#fe8027" />
+					<text class="stat-label">我的收藏</text>
+				</view>
+				<view class="stat-card" @tap="goPage('history')">
+					<image class="history-img" src="/static/image/icon_history_sel.png" mode="aspectFit" />
+					<text class="stat-label">观看历史</text>
+				</view>
+				<view class="stat-card">
+					<uni-icons type="download" size="30" color="#fe8027" />
+					<text class="stat-label">我的下载</text>
+				</view>
+			</view>
+
+			<!-- 订阅源设置 -->
+			<view class="section">
+				<view class="section-header">
+					<uni-icons type="link" size="18" color="#888" />
+					<text class="section-title">订阅源</text>
+				</view>
+				<view class="sub-input">
+					<input v-model="subUrl" placeholder="输入订阅地址（JSON URL）" placeholder-class="placeholder"
+						maxlength="100" />
+					<uni-icons v-if="subUrl" type="closeempty" size="17" color="#999" class="sub-clear-icon"
+						@tap="subUrl = ''" />
+					<text class="sub-btn" @tap="submitSub">确定</text>
+				</view>
+				<view v-if="store.subUrl" class="sub-hint">
+					<text class="sub-hint-text">当前订阅源：{{ store.subUrl }}</text>
+					<text class="sub-copy-btn" @tap="copySubUrl">复制</text>
+				</view>
+				<view class="sub-history-link" @tap="goPage('subHistory')">
+					<text class="sub-history-text">历史订阅源</text>
+					<uni-icons type="arrowright" size="16" color="#666" />
+				</view>
+			</view>
+
+			<!-- 首页布局 -->
+			<view class="section">
+				<view class="section-header">
+					<uni-icons type="image-filled" size="18" color="#888" />
+					<text class="section-title">首页布局</text>
+				</view>
+				<view class="img-size-options">
+					<text class="img-size-btn" v-for="opt in colOptions" :key="opt.value"
+						:class="{ active: currentCols === opt.value }" @tap="setImgSize(opt.value)">
+						<text class="img-size-btn-label">{{ opt.label }}</text>
+						<text class="img-size-btn-cols">一行{{ opt.value }}列</text>
+					</text>
+				</view>
+			</view>
+
+			<!-- 显示主题（深色/浅色） -->
+			<view class="section">
+				<view class="section-header">
+					<uni-icons type="color-filled" size="18" color="#888" />
+					<text class="section-title">显示主题</text>
+				</view>
+				<view class="setting-item">
+					<view class="setting-item-left">
+						<text class="setting-item-label">深色模式</text>
+					</view>
+					<switch :checked="theme === 'dark'" @change="onThemeChange" color="#fe8027" />
+				</view>
+			</view>
+
+			<!-- 播放设置 -->
+			<view class="section">
+				<view class="section-header">
+					<uni-icons type="videocam-filled" size="18" color="#888" />
+					<text class="section-title">播放设置</text>
+				</view>
+				<view class="setting-item">
+					<view class="setting-item-left">
+						<text class="setting-item-label">静音播放</text>
+					</view>
+					<switch :checked="muted" @change="onMutedChange" color="#fe8027" />
+				</view>
+				<view class="setting-divider" />
+				<view class="setting-item">
+					<view class="setting-item-left">
+						<text class="setting-item-label">长按倍速</text>
+					</view>
+					<view class="speed-picker">
+						<text v-for="opt in speedOptions" :key="opt.value" class="speed-picker-item"
+							:class="{ active: longPressSpeed === opt.value }"
+							@tap="onLongPressSpeedChange(opt.value)">{{ opt.text }}</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 清除缓存 -->
+			<view class="section">
+				<view class="setting-item" @tap="clearCache">
+					<view class="setting-item-left no-indent">
+						<uni-icons type="trash-filled" size="18" color="#888" />
+						<text class="setting-item-label">清除缓存</text>
+					</view>
+					<view class="setting-item-right">
+						<text class="cache-size">{{ cacheSize }}</text>
+						<uni-icons type="arrowright" size="16" color="#666" />
+					</view>
+				</view>
+			</view>
+
+			<!-- 关于 -->
+			<view class="about">
+				<text class="version">乐意欧TV v1.0.14</text>
+			</view>
+		</view>
+
 		<!-- 头像选择弹窗 -->
 		<view class="avatar-overlay" v-if="showAvatarPicker" @tap.self="showAvatarPicker = false">
 			<view class="avatar-picker">
@@ -56,118 +171,6 @@
 					</text>
 				</view>
 			</view>
-		</view>
-
-		<!-- 功能卡片（纯图标入口，点击跳转详情页） -->
-		<view class="stats-row">
-			<view class="stat-card" @tap="goPage('favorite')">
-				<uni-icons type="star-filled" size="32" color="#888" />
-				<text class="stat-label">我的收藏</text>
-			</view>
-			<view class="stat-card" @tap="goPage('history')">
-				<uni-icons type="clock-filled" size="32" color="#888" />
-				<text class="stat-label">观看历史</text>
-			</view>
-			<view class="stat-card">
-				<uni-icons type="download-filled" size="32" color="#888" />
-				<text class="stat-label">我的下载</text>
-			</view>
-		</view>
-
-		<!-- 订阅源设置 -->
-		<view class="section">
-			<view class="section-header">
-				<uni-icons type="link" size="18" color="#888" />
-				<text class="section-title">订阅源</text>
-			</view>
-			<view class="sub-input">
-				<input v-model="subUrl" placeholder="输入订阅地址（JSON URL）" placeholder-class="placeholder"
-					maxlength="100" />
-				<uni-icons v-if="subUrl" type="closeempty" size="17" color="#999" class="sub-clear-icon"
-					@tap="subUrl = ''" />
-				<text class="sub-btn" @tap="submitSub">确定</text>
-			</view>
-			<view v-if="store.subUrl" class="sub-hint">
-				<text class="sub-hint-text">当前订阅源：{{ store.subUrl }}</text>
-				<text class="sub-copy-btn" @tap="copySubUrl">复制</text>
-			</view>
-			<view class="sub-history-link" @tap="goPage('subHistory')">
-				<text class="sub-history-text">历史订阅源</text>
-				<uni-icons type="arrowright" size="16" color="#666" />
-			</view>
-		</view>
-
-		<!-- 首页布局 -->
-		<view class="section">
-			<view class="section-header">
-				<uni-icons type="image-filled" size="18" color="#888" />
-				<text class="section-title">首页布局</text>
-			</view>
-			<view class="img-size-options">
-				<text class="img-size-btn" v-for="opt in colOptions" :key="opt.value"
-					:class="{ active: currentCols === opt.value }" @tap="setImgSize(opt.value)">
-					<text class="img-size-btn-label">{{ opt.label }}</text>
-					<text class="img-size-btn-cols">一行{{ opt.value }}列</text>
-				</text>
-			</view>
-		</view>
-
-		<!-- 显示主题（深色/浅色） -->
-		<view class="section">
-			<view class="section-header">
-				<uni-icons type="color-filled" size="18" color="#888" />
-				<text class="section-title">显示主题</text>
-			</view>
-			<view class="setting-item">
-				<view class="setting-item-left">
-					<text class="setting-item-label">深色模式</text>
-				</view>
-				<switch :checked="theme === 'dark'" @change="onThemeChange" color="#fe8027" />
-			</view>
-		</view>
-
-		<!-- 播放设置 -->
-		<view class="section">
-			<view class="section-header">
-				<uni-icons type="videocam-filled" size="18" color="#888" />
-				<text class="section-title">播放设置</text>
-			</view>
-			<view class="setting-item">
-				<view class="setting-item-left">
-					<text class="setting-item-label">静音播放</text>
-				</view>
-				<switch :checked="muted" @change="onMutedChange" color="#fe8027" />
-			</view>
-			<view class="setting-divider" />
-			<view class="setting-item">
-				<view class="setting-item-left">
-					<text class="setting-item-label">长按倍速</text>
-				</view>
-				<view class="speed-picker">
-					<text v-for="opt in speedOptions" :key="opt.value" class="speed-picker-item"
-						:class="{ active: longPressSpeed === opt.value }"
-						@tap="onLongPressSpeedChange(opt.value)">{{ opt.text }}</text>
-				</view>
-			</view>
-		</view>
-
-		<!-- 清除缓存 -->
-		<view class="section">
-			<view class="setting-item" @tap="clearCache">
-				<view class="setting-item-left no-indent">
-					<uni-icons type="trash-filled" size="18" color="#888" />
-					<text class="setting-item-label">清除缓存</text>
-				</view>
-				<view class="setting-item-right">
-					<text class="cache-size">{{ cacheSize }}</text>
-					<uni-icons type="arrowright" size="16" color="#666" />
-				</view>
-			</view>
-		</view>
-
-		<!-- 关于 -->
-		<view class="about">
-			<text class="version">乐意欧TV v1.0.14</text>
 		</view>
 	</view>
 </template>
@@ -590,19 +593,28 @@
 
 <style lang="scss" scoped>
 	.page {
-		min-height: 100vh;
-		overflow-y: auto;
+		height: 100vh;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
 		background: var(--bg-primary);
-		padding-bottom: 20rpx;
-		padding-top: 10rpx;
 	}
 
 	/* 顶部背景区域（深色渐变，模拟影院氛围） */
 	.header-bg {
+		flex-shrink: 0;
+		position: relative;
+		z-index: 1;
 		background:
 			radial-gradient(ellipse at 50% 0%, rgba(254, 128, 39, 0.18) 0%, transparent 85%),
 			linear-gradient(180deg, var(--gradient-from) 0%, var(--gradient-to) 65%);
 		background-color: var(--bg-primary);
+	}
+
+	.scroll-body {
+		flex: 1;
+		overflow-y: auto;
+		padding-bottom: 20rpx;
 	}
 
 	/* ========== 用户头部 ========== */
@@ -813,6 +825,11 @@
 			font-size: 18rpx;
 			color: #555;
 			margin-top: 2rpx;
+		}
+
+		.history-img {
+			width: 60rpx;
+			height: 60rpx;
 		}
 	}
 

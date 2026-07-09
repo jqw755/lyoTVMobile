@@ -1,9 +1,12 @@
 <template>
 	<view class="page" :style="themeStyle">
 		<!-- 顶部背景区 -->
-		<view class="header-bg" :style="{ paddingTop: statusBarHeight + 'px' }">
+		<view class="header-bg" :style="{ paddingTop: (statusBarHeight + 10) + 'px' }">
 			<view class="title-bar">
-				<text class="title-bar-title">我的收藏</text>
+				<view class="title-bar-left">
+					<uni-icons type="left" size="24" color="#888" @tap="goBack" />
+					<text class="title-bar-title">我的收藏</text>
+				</view>
 				<view class="title-bar-icons">
 					<text v-if="isEditing" class="title-bar-clear" @tap="onClearAll">清空全部</text>
 					<text v-if="isEditing" class="title-bar-done" @tap="exitEditMode">完成</text>
@@ -35,32 +38,19 @@
 
 		<!-- 主列表 -->
 		<scroll-view v-else class="scroll-body" scroll-y @scrolltolower="onLoadMore" lower-threshold="100">
-			<!-- 按时间线分组渲染 -->
-			<view v-for="(section, si) in visibleSections" :key="si" class="section">
-				<view class="section-header">
-					<text class="section-title">{{ section.key }}</text>
-				</view>
-				<view class="grid" :class="'cols-' + gridCols">
-					<view v-for="item in section.items" :key="'fav-' + item.vod_id" class="grid-item"
-						@tap="goDetail(item)">
-						<view class="grid-card">
-							<view class="grid-poster-wrap">
-								<image class="grid-poster" :src="item.vod_pic" mode="aspectFit" lazy-load />
-								<text v-if="item.vod_remarks && item.vod_remarks !== '0'" class="grid-badge">
-									{{ item.vod_remarks }}
-								</text>
-								<!-- 编辑模式下的删除按钮 -->
-								<view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
-									<uni-icons type="closeempty" size="16" color="#fff" />
-								</view>
-							</view>
-							<view class="grid-info">
-								<text class="grid-title" :lines="1">{{ item.vod_name }}</text>
-							</view>
-						</view>
-					</view>
-				</view>
-			</view>
+		 <!-- 按时间线分组渲染 -->
+		 <view v-for="(section, si) in visibleSections" :key="si" class="section">
+		  <view class="section-header">
+		   <text class="section-title">{{ section.key }}</text>
+		  </view>
+		  <vod-grid :items="section.items" @itemTap="goDetail">
+		   <template #overlay="{ item }">
+		    <view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
+		     <uni-icons type="closeempty" size="16" color="#fff" />
+		    </view>
+		   </template>
+		  </vod-grid>
+		 </view>
 			<uni-load-more :status="loadMoreStatus" />
 		</scroll-view>
 	</view>
@@ -79,13 +69,12 @@
 		onPullDownRefresh
 	} from '@dcloudio/uni-app'
 	import {
-	  getFavoritesPaginated,
-	  removeFavorite,
-	  addHistory,
-	  getCurrentUser,
-	  getSetting,
-	  clearFavorites,
-	 } from '@/utils/store.js'
+		getFavoritesPaginated,
+		removeFavorite,
+		addHistory,
+		getCurrentUser,
+		clearFavorites,
+	} from '@/utils/store.js'
 	import {
 		useStatusBar
 	} from '@/utils/useStatusBar.js'
@@ -101,7 +90,6 @@
 	const loggedIn = ref(false)
 	const page = ref(1)
 	const hasMore = ref(true)
-	const gridCols = ref(4)
 	const isEditing = ref(false)
 
 	function groupByTime(items, timeField = 'fav_time') {
@@ -153,7 +141,7 @@
 	}
 
 	const visibleSections = computed(() => {
-	 return groupByTime(list.value, 'fav_time')
+		return groupByTime(list.value, 'fav_time')
 	})
 
 	const loadMoreStatus = computed(() => {
@@ -163,23 +151,23 @@
 	})
 
 	async function load() {
-	 loggedIn.value = !!getCurrentUser()
-	 if (!loggedIn.value) {
-	  list.value = []
-	  return
-	 }
-	 loading.value = true
-	 page.value = 1
-	 hasMore.value = true
-	 try {
-	  const result = await getFavoritesPaginated(1, PAGE_SIZE)
-	  list.value = result.items
-	  hasMore.value = result.hasMore
-	 } catch {
-	  list.value = []
-	 } finally {
-	  loading.value = false
-	 }
+		loggedIn.value = !!getCurrentUser()
+		if (!loggedIn.value) {
+			list.value = []
+			return
+		}
+		loading.value = true
+		page.value = 1
+		hasMore.value = true
+		try {
+			const result = await getFavoritesPaginated(1, PAGE_SIZE)
+			list.value = result.items
+			hasMore.value = result.hasMore
+		} catch {
+			list.value = []
+		} finally {
+			loading.value = false
+		}
 	}
 
 	function enterEditMode() {
@@ -236,6 +224,10 @@
 		})
 	}
 
+	function goBack() {
+		uni.navigateBack()
+	}
+
 	function goDetail(item) {
 		if (isEditing.value) return
 		addHistory(item)
@@ -245,25 +237,24 @@
 	}
 
 	async function onLoadMore() {
-	 if (loading.value || !hasMore.value) return
-	 loading.value = true
-	 try {
-	  const nextPage = page.value + 1
-	  const result = await getFavoritesPaginated(nextPage, PAGE_SIZE)
-	  if (result.items.length > 0) {
-	   list.value = [...list.value, ...result.items]
-	   page.value = nextPage
-	  }
-	  hasMore.value = result.hasMore
-	 } catch {
-	  // 加载下一页失败，静默处理
-	 } finally {
-	  loading.value = false
-	 }
+		if (loading.value || !hasMore.value) return
+		loading.value = true
+		try {
+			const nextPage = page.value + 1
+			const result = await getFavoritesPaginated(nextPage, PAGE_SIZE)
+			if (result.items.length > 0) {
+				list.value = [...list.value, ...result.items]
+				page.value = nextPage
+			}
+			hasMore.value = result.hasMore
+		} catch {
+			// 加载下一页失败，静默处理
+		} finally {
+			loading.value = false
+		}
 	}
 
 	onShow(() => {
-		gridCols.value = getSetting('grid_cols', 4)
 		load()
 	})
 
@@ -278,7 +269,6 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--bg-primary);
-		padding-top: 10rpx;
 	}
 
 	/* ===== 顶部背景 + 自定义标题栏 ===== */
@@ -297,8 +287,14 @@
 		padding: 10rpx 24rpx 20rpx;
 	}
 
+	.title-bar-left {
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+	}
+
 	.title-bar-title {
-		font-size: 44rpx;
+		font-size: 40rpx;
 		font-weight: var(--weight-bold);
 		color: var(--text-primary);
 	}
@@ -399,73 +395,6 @@
 			background: $theme-accent;
 			border-radius: 3rpx;
 		}
-	}
-
-	/* ===== 网格布局 ===== */
-	.grid {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		padding: 0 24rpx;
-	}
-
-	.grid-item {
-		box-sizing: border-box;
-		padding: 6rpx;
-		position: relative;
-	}
-
-	.cols-3 {
-		gap: 18rpx;
-	}
-
-	.cols-3 .grid-item {
-		width: 30%;
-	}
-
-	.cols-4 .grid-item {
-		width: 25%;
-	}
-
-	.cols-5 .grid-item {
-		width: 20%;
-	}
-
-	.grid-card {
-		border-radius: 14rpx;
-		overflow: visible;
-		background: var(--card);
-		box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.08);
-		transition: transform 0.2s;
-
-		&:active {
-			transform: scale(0.98);
-		}
-	}
-
-	.grid-poster-wrap {
-		position: relative;
-		width: 100%;
-	}
-
-	.grid-poster {
-		width: 100%;
-		height: 200rpx;
-		display: block;
-		background: var(--card-hover);
-	}
-
-	.grid-badge {
-		position: absolute;
-		top: 8rpx;
-		right: 8rpx;
-		background: $theme-accent;
-		color: #fff;
-		font-size: 18rpx;
-		padding: 2rpx 10rpx;
-		border-radius: 6rpx;
-		line-height: 1.4;
-		font-weight: 500;
 	}
 
 	/* 编辑模式删除按钮 — 全圆灰底 */

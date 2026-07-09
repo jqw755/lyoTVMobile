@@ -29,6 +29,23 @@ const DARK = {
   '--accent': '#fe8027',
   '--gradient-from': '#1c1512',
   '--gradient-to': '#141414',
+  // 字号
+  '--text-xs': '20rpx',
+  '--text-sm': '24rpx',
+  '--text-base': '28rpx',
+  '--text-lg': '32rpx',
+  '--text-xl': '36rpx',
+  // 字重
+  '--weight-medium': '500',
+  '--weight-semibold': '600',
+  '--weight-bold': '700',
+  // 字距
+  '--tracking-narrow': '-0.3px',
+  '--tracking-normal': '0',
+  '--tracking-wide': '1px',
+  // 行高
+  '--leading-tight': '1.2',
+  '--leading-loose': '1.8',
   backgroundColor: '#141414',
   color: '#ffffff',
 }
@@ -44,6 +61,23 @@ const LIGHT = {
   '--accent': '#fe8027',
   '--gradient-from': '#fef0e8',
   '--gradient-to': '#f5f5f5',
+  // 字号
+  '--text-xs': '20rpx',
+  '--text-sm': '24rpx',
+  '--text-base': '28rpx',
+  '--text-lg': '32rpx',
+  '--text-xl': '36rpx',
+  // 字重
+  '--weight-medium': '500',
+  '--weight-semibold': '600',
+  '--weight-bold': '700',
+  // 字距
+  '--tracking-narrow': '-0.3px',
+  '--tracking-normal': '0',
+  '--tracking-wide': '1px',
+  // 行高
+  '--leading-tight': '1.2',
+  '--leading-loose': '1.8',
   backgroundColor: '#ffffff',
   color: '#000000',
 }

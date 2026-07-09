@@ -1,10 +1,10 @@
 <template>
 	<view class="page" :style="themeStyle">
 		<!-- 顶部背景区域（状态栏间距 + 影视背景图） -->
-		<view class="header-bg" :style="{ paddingTop: statusBarHeight + 'px' }">
+		<view class="header-bg" :style="{ paddingTop: (statusBarHeight + 10) + 'px' }">
 			<!-- 顶部自定义导航栏 -->
 			<view class="nav-bar">
-				<uni-icons type="left" size="22" color="#888" class="nav-back" @tap="goBack" />
+				<uni-icons type="left" size="24" color="#888" class="nav-back" @tap="goBack" />
 				<view class="nav-search">
 					<uni-icons type="search" size="18" color="#888" />
 					<input v-model="keyword" placeholder="搜索影片" maxlength="20" placeholder-class="nav-placeholder"
@@ -294,15 +294,14 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--bg-primary);
-		padding-top: 10rpx;
 	}
 
 	/* ========== 背景区域（深色渐变） ========== */
 	.header-bg {
 		flex-shrink: 0;
 		background:
-			radial-gradient(ellipse at 50% 0%, rgba(254, 128, 39, 0.15) 0%, transparent 85%),
-			linear-gradient(180deg, var(--gradient-from) 0%, var(--gradient-to) 65%);
+			radial-gradient(ellipse at 50% 0%, rgba(254, 128, 39, 0.18) 0%, transparent 85%),
+			linear-gradient(180deg, var(--gradient-from) 0%, var(--gradient-to) 80%);
 		background-color: var(--bg-primary);
 	}
 
@@ -332,7 +331,8 @@
 		backdrop-filter: blur(8px);
 		border-radius: 40rpx;
 		padding: 4rpx 20rpx;
-		height: 64rpx;
+		height: 60rpx;
+		border: 2rpx solid #6b6b6b;
 
 		input {
 			flex: 1;
@@ -357,7 +357,7 @@
 		background: $theme-accent;
 		color: #fff;
 		font-size: 26rpx;
-		padding: 12rpx 28rpx;
+		padding: 16rpx 28rpx;
 		border-radius: 40rpx;
 		flex-shrink: 0;
 

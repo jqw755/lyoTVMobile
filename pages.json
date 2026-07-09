@@ -42,6 +42,7 @@
 		{
 			"path": "pages/history/history",
 			"style": {
+				"navigationStyle": "custom",
 				"navigationBarTitleText": "观看历史",
 				"backgroundColorContent": "#141414",
 				"enablePullDownRefresh": true
@@ -50,6 +51,7 @@
 		{
 			"path": "pages/favorite/favorite",
 			"style": {
+				"navigationStyle": "custom",
 				"navigationBarTitleText": "我的收藏",
 				"backgroundColorContent": "#141414",
 				"enablePullDownRefresh": true

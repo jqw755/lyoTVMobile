@@ -1,9 +1,12 @@
 <template>
 	<view class="page" :style="themeStyle">
 		<!-- 顶部背景区 -->
-		<view class="header-bg" :style="{ paddingTop: statusBarHeight + 'px' }">
+		<view class="header-bg" :style="{ paddingTop: (statusBarHeight + 10) + 'px' }">
 			<view class="title-bar">
-				<text class="title-bar-title">观看历史</text>
+				<view class="title-bar-left">
+					<uni-icons type="left" size="24" color="#888" @tap="goBack" />
+					<text class="title-bar-title">观看历史</text>
+				</view>
 				<view class="title-bar-icons">
 					<text v-if="isEditing" class="title-bar-clear" @tap="onClearAll">清空全部</text>
 					<text v-if="isEditing" class="title-bar-done" @tap="exitEditMode">完成</text>
@@ -12,16 +15,8 @@
 			</view>
 		</view>
 
-		<!-- 空状态：未登录 -->
-		<view class="empty" v-if="!loggedIn">
-			<uni-icons type="clock" size="60" color="#555" />
-			<text class="empty-text">请先登录</text>
-			<text class="empty-sub">登录后观看历史将同步到云端</text>
-			<view class="login-btn" @tap="goLogin">去登录</view>
-		</view>
-
 		<!-- 空状态：无历史 -->
-		<view class="empty" v-else-if="list.length === 0 && !loading">
+		<view class="empty" v-if="list.length === 0 && !loading">
 			<uni-icons type="clock" size="60" color="#555" />
 			<text class="empty-text">暂无观看记录</text>
 			<text class="empty-sub">快去观看影片吧</text>
@@ -35,34 +30,20 @@
 
 		<!-- 主列表 -->
 		<scroll-view v-else class="scroll-body" scroll-y @scrolltolower="onLoadMore" lower-threshold="100">
-			<!-- 按时间线分组渲染 -->
-			<view v-for="(section, si) in visibleSections" :key="si" class="section">
-				<view class="section-header">
-					<text class="section-title">{{ section.key }}</text>
-				</view>
-				<view class="grid" :class="'cols-' + gridCols">
-					<view v-for="item in section.items"
-						:key="'hist-' + item.vod_id + '-' + (item.view_time || item.time)" class="grid-item"
-						@tap="goDetail(item)">
-						<view class="grid-card">
-							<view class="grid-poster-wrap">
-								<image class="grid-poster" :src="item.vod_pic" mode="aspectFit" lazy-load />
-								<text v-if="item.vod_remarks && item.vod_remarks !== '0'" class="grid-badge">
-									{{ item.vod_remarks }}
-								</text>
-								<text v-if="item.episode" class="grid-badge-episode">{{ item.episode }}</text>
-								<!-- 编辑模式下的删除按钮 -->
-								<view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
-									<uni-icons type="closeempty" size="16" color="#fff" />
-								</view>
-							</view>
-							<view class="grid-info">
-								<text class="grid-title" :lines="1">{{ item.vod_name }}</text>
-							</view>
-						</view>
-					</view>
-				</view>
-			</view>
+		  <!-- 按时间线分组渲染 -->
+		  <view v-for="(section, si) in visibleSections" :key="si" class="section">
+		   <view class="section-header">
+		    <text class="section-title">{{ section.key }}</text>
+		   </view>
+		   <vod-grid :items="section.items" @itemTap="goDetail">
+		    <template #overlay="{ item }">
+		     <text v-if="item.episode" class="grid-badge-episode">{{ item.episode }}</text>
+		     <view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
+		      <uni-icons type="closeempty" size="16" color="#fff" />
+		     </view>
+		    </template>
+		   </vod-grid>
+		  </view>
 			<uni-load-more :status="loadMoreStatus" />
 		</scroll-view>
 	</view>
@@ -85,8 +66,6 @@
 		clearHistory,
 		addHistory,
 		removeHistoryItem,
-		getCurrentUser,
-		getSetting,
 	} from '@/utils/store.js'
 	import {
 		useStatusBar
@@ -98,10 +77,8 @@
 
 	const list = ref([])
 	const loading = ref(false)
-	const loggedIn = ref(false)
 	const displayCount = ref(20)
 	const hasMore = ref(true)
-	const gridCols = ref(4)
 	const isEditing = ref(false)
 
 	function groupByTime(items, timeField = 'view_time') {
@@ -162,21 +139,11 @@
 	})
 
 	async function load() {
-		loggedIn.value = !!getCurrentUser()
-		if (!loggedIn.value) {
-			list.value = []
-			return
-		}
 		loading.value = true
-		displayCount.value = 30
+		displayCount.value = 20
 		hasMore.value = true
-		try {
-			list.value = await getHistory()
-		} catch {
-			list.value = []
-		} finally {
-			loading.value = false
-		}
+		list.value = getHistory()
+		loading.value = false
 	}
 
 	function enterEditMode() {
@@ -229,10 +196,8 @@
 		})
 	}
 
-	function goLogin() {
-		uni.navigateTo({
-			url: '/pages/login/login'
-		})
+	function goBack() {
+		uni.navigateBack()
 	}
 
 	function goDetail(item) {
@@ -262,7 +227,6 @@
 	}
 
 	onShow(() => {
-		gridCols.value = getSetting('grid_cols', 4)
 		load()
 	})
 
@@ -277,7 +241,6 @@
 		display: flex;
 		flex-direction: column;
 		background: var(--bg-primary);
-		padding-top: 10rpx;
 	}
 
 	/* ===== 顶部背景 + 自定义标题栏 ===== */
@@ -296,8 +259,14 @@
 		padding: 10rpx 24rpx 20rpx;
 	}
 
+	.title-bar-left {
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+	}
+
 	.title-bar-title {
-		font-size: 44rpx;
+		font-size: 40rpx;
 		font-weight: var(--weight-bold);
 		color: var(--text-primary);
 	}
@@ -398,72 +367,6 @@
 			background: $theme-accent;
 			border-radius: 3rpx;
 		}
-	}
-
-	/* ===== 网格布局 ===== */
-	.grid {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		padding: 0 24rpx;
-	}
-
-	.grid-item {
-		box-sizing: border-box;
-		padding: 6rpx;
-	}
-
-	.cols-3 {
-		gap: 18rpx;
-	}
-
-	.cols-3 .grid-item {
-		width: 30%;
-	}
-
-	.cols-4 .grid-item {
-		width: 25%;
-	}
-
-	.cols-5 .grid-item {
-		width: 20%;
-	}
-
-	.grid-card {
-		border-radius: 14rpx;
-		overflow: visible;
-		background: var(--card);
-		box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.08);
-		transition: transform 0.2s;
-
-		&:active {
-			transform: scale(0.98);
-		}
-	}
-
-	.grid-poster-wrap {
-		position: relative;
-		width: 100%;
-	}
-
-	.grid-poster {
-		width: 100%;
-		height: 200rpx;
-		display: block;
-		background: var(--card-hover);
-	}
-
-	.grid-badge {
-		position: absolute;
-		top: 8rpx;
-		right: 8rpx;
-		background: $theme-accent;
-		color: #fff;
-		font-size: 18rpx;
-		padding: 2rpx 10rpx;
-		border-radius: 6rpx;
-		line-height: 1.4;
-		font-weight: 500;
 	}
 
 	.grid-badge-episode {

@@ -1,7 +1,7 @@
 <template>
 	<view class="page" :style="themeStyle">
 		<!-- 顶部背景区域（动态状态栏间距 + 影视背景图） -->
-		<view class="header-bg" :style="{ paddingTop: statusBarHeight + 'px' }">
+		<view class="header-bg" :style="{ paddingTop: (statusBarHeight + 10) + 'px' }">
 			<!-- 自定义标题栏 -->
 			<view class="title-bar">
 				<text class="title-bar-logo">乐意欧TV</text>
@@ -39,21 +39,7 @@
 		<!-- 可滚动列表 -->
 		<scroll-view v-else class="scroll-body" scroll-y @scrolltolower="onLoadMore" lower-threshold="100"
 			@scroll="onScroll">
-			<view class="grid" :class="'cols-' + gridCols">
-				<view class="grid-item" v-for="item in list" :key="item.vod_id" @tap="goDetail(item)">
-					<view class="grid-card">
-						<view class="grid-poster-wrap">
-							<image class="grid-poster" :src="item.vod_pic" mode="aspectFit" lazy-load />
-							<text v-if="item.vod_remarks && item.vod_remarks !== '0'" class="grid-badge">
-								{{ item.vod_remarks }}
-							</text>
-						</view>
-						<view class="grid-info">
-							<text class="grid-title" :lines="1">{{ item.vod_name }}</text>
-						</view>
-					</view>
-				</view>
-			</view>
+			<vod-grid :items="list" @itemTap="goDetail" />
 			<uni-load-more :status="loadMoreStatus" />
 		</scroll-view>
 	</view>
@@ -75,13 +61,14 @@
 	} from '@/utils/api.js'
 	import {
 		addHistory,
-		getSetting
 	} from '@/utils/store.js'
 	import {
 		store,
-		updateHome
+		updateHome,
+		updateSites
 	} from '@/utils/appState.js'
 	import CategoryNav from '@/components/category-nav.vue'
+	import VodGrid from '@/components/vod-grid.vue'
 	import {
 		useStatusBar
 	} from '@/utils/useStatusBar.js'
@@ -105,16 +92,6 @@
 	const noMore = ref(false)
 	const showTopBtn = ref(false)
 
-	const gridCols = ref(4)
-
-	function loadGridCols() {
-		gridCols.value = getSetting('grid_cols', 4)
-	}
-	loadGridCols()
-	uni.$on('gridColsChanged', (val) => {
-		if (val != null) gridCols.value = val
-	})
-
 	const loadMoreStatus = computed(() => {
 		if (loadingMore.value) return 'loading'
 		if (noMore.value) return 'noMore'
@@ -135,7 +112,7 @@
 	})
 
 	onMounted(async () => {
-		if (!store.subUrl) {
+	  if (!store.subUrl) {
 			loading.value = false
 			noSource.value = true
 			return
@@ -276,7 +253,6 @@
 		flex-direction: column;
 		background: var(--bg-primary);
 		overflow-x: hidden;
-		padding-top: 10rpx;
 	}
 
 	/* 顶部背景区域（深色渐变，模拟影院氛围） */
@@ -293,7 +269,7 @@
 	.header {
 		flex-shrink: 0;
 		z-index: 10;
-		padding-bottom: 4rpx;
+		padding-bottom: 16rpx;
 	}
 
 	/* 自定义标题栏 */
@@ -308,9 +284,10 @@
 	.title-bar-logo {
 		font-size: 44rpx;
 		font-weight: bolder;
-		font-weight: var(--weight-bold);
+		font-weight: 800;
 		color: var(--text-primary);
 		letter-spacing: var(--tracking-wide);
+		letter-spacing: 2px;
 	}
 
 	.title-bar-icons {
@@ -328,14 +305,13 @@
 	.fab-top {
 		position: fixed;
 		right: 32rpx;
-		bottom: 80rpx;
+		bottom: 150rpx;
 		width: 100rpx;
 		height: 100rpx;
+		line-height: 90rpx;
 		border-radius: 50%;
-		background: linear-gradient(135deg, #fe8027, #f9631e);
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		background: linear-gradient(135deg, $theme-accent, #f9631e);
+		text-align: center;
 		z-index: 99;
 		box-shadow: 0 6rpx 20rpx rgba(254, 128, 39, 0.4);
 
@@ -349,87 +325,6 @@
 	.scroll-body {
 		flex: 1;
 		overflow-y: auto;
-	}
-
-	/* 网格布局 */
-	.grid {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		padding: 0 24rpx;
-	}
-
-	.grid-item {
-		box-sizing: border-box;
-		padding: 6rpx;
-	}
-
-	.cols-3 {
-		gap: 18rpx;
-	}
-
-	.cols-3 .grid-item {
-		width: 30%;
-	}
-
-	.cols-4 .grid-item {
-		width: 25%;
-	}
-
-	.cols-5 .grid-item {
-		width: 20%;
-	}
-
-	.grid-card {
-		border-radius: 14rpx;
-		overflow: hidden;
-		background: var(--card);
-		box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.08);
-		transition: transform 0.2s;
-
-		&:active {
-			transform: scale(0.98);
-		}
-	}
-
-	.grid-poster-wrap {
-		position: relative;
-		width: 100%;
-	}
-
-	.grid-poster {
-		width: 100%;
-		height: 200rpx;
-		display: block;
-		background: var(--card-hover);
-	}
-
-	.grid-badge {
-		position: absolute;
-		top: 8rpx;
-		right: 8rpx;
-		background: $theme-accent;
-		color: #fff;
-		font-size: 18rpx;
-		padding: 2rpx 10rpx;
-		border-radius: 6rpx;
-		line-height: 1.4;
-		font-weight: 500;
-	}
-
-	.grid-info {
-		padding: 10rpx 8rpx 12rpx;
-	}
-
-	.grid-title {
-		font-size: var(--text-sm);
-		font-weight: var(--weight-medium);
-		color: var(--text-primary);
-		line-height: 1.3;
-		display: -webkit-box;
-		-webkit-line-clamp: 1;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
 	}
 
 	/* 首次加载 / 无订阅 居中状态 */
