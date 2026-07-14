@@ -22,7 +22,7 @@
 			<!-- 功能卡片（纯图标入口，点击跳转详情页） -->
 			<view class="stats-row">
 				<view class="stat-card" @tap="goPage('favorite')">
-					<uni-icons type="star" size="32" color="#fe8027" />
+					<uni-icons type="star" size="33" color="#fe8027" />
 					<text class="stat-label">我的收藏</text>
 				</view>
 				<view class="stat-card" @tap="goPage('history')">
@@ -35,23 +35,44 @@
 				</view>
 			</view>
 
-			<!-- 订阅源设置 -->
+			<!-- 订阅源设置（点播 + 直播 + 历史，共享一个模块背景） -->
 			<view class="section">
-				<view class="section-header">
-					<uni-icons type="link" size="18" color="#888" />
-					<text class="section-title">订阅源</text>
+				<view class="sub-group">
+					<view class="section-header">
+						<uni-icons type="link" size="18" color="#888" />
+						<text class="section-title">点播源</text>
+					</view>
+					<view class="sub-input">
+						<input v-model="subUrl" placeholder="输入点播订阅地址" placeholder-class="placeholder"
+							maxlength="100" />
+						<uni-icons v-if="subUrl" type="closeempty" size="17" color="#999" class="sub-clear-icon"
+							@tap="subUrl = ''" />
+						<text class="sub-btn" @tap="submitSub">确定</text>
+					</view>
+					<view v-if="store.subUrl" class="sub-hint">
+						<text class="sub-hint-text">当前点播源：{{ store.subUrl }}</text>
+						<text class="sub-copy-btn" @tap="copySubUrl">复制</text>
+					</view>
 				</view>
-				<view class="sub-input">
-					<input v-model="subUrl" placeholder="输入订阅地址（JSON URL）" placeholder-class="placeholder"
-						maxlength="100" />
-					<uni-icons v-if="subUrl" type="closeempty" size="17" color="#999" class="sub-clear-icon"
-						@tap="subUrl = ''" />
-					<text class="sub-btn" @tap="submitSub">确定</text>
+
+				<view class="sub-group">
+					<view class="section-header">
+						<uni-icons type="link" size="18" color="#888" />
+						<text class="section-title">直播源</text>
+					</view>
+					<view class="sub-input">
+						<input v-model="liveSubUrl" placeholder="输入直播订阅地址（留空则用点播源）" placeholder-class="placeholder"
+							maxlength="100" />
+						<uni-icons v-if="liveSubUrl" type="closeempty" size="17" color="#999" class="sub-clear-icon"
+							@tap="liveSubUrl = ''" />
+						<text class="sub-btn" @tap="submitLiveSub">确定</text>
+					</view>
+					<view v-if="store.liveSubUrl" class="sub-hint">
+						<text class="sub-hint-text">当前直播源：{{ store.liveSubUrl }}</text>
+						<text class="sub-copy-btn" @tap="copyLiveSubUrl">复制</text>
+					</view>
 				</view>
-				<view v-if="store.subUrl" class="sub-hint">
-					<text class="sub-hint-text">当前订阅源：{{ store.subUrl }}</text>
-					<text class="sub-copy-btn" @tap="copySubUrl">复制</text>
-				</view>
+
 				<view class="sub-history-link" @tap="goPage('subHistory')">
 					<text class="sub-history-text">历史订阅源</text>
 					<uni-icons type="arrowright" size="16" color="#666" />
@@ -128,7 +149,7 @@
 
 			<!-- 关于 -->
 			<view class="about">
-				<text class="version">乐意欧TV v1.0.14</text>
+				<text class="version">乐意欧TV v1.0.38</text>
 			</view>
 		</view>
 
@@ -185,20 +206,27 @@
 	import {
 		store,
 		setSubUrl,
+		setLiveSubUrl,
 		updateHome,
 		updateSites
 	} from '@/utils/appState.js'
 	import {
 		init as apiInit,
-		home,
 		getSites,
-		liveInit
+		liveInit,
+		ensureInit,
+		home as apiHome
 	} from '@/utils/api.js'
+	import {
+		addLog,
+		logSection
+	} from '@/utils/debugLog.js'
 	import {
 		getSetting,
 		setSetting,
 		getSubHistory,
 		addSubHistory,
+		addLiveSubHistory,
 		removeSubHistory,
 		getCurrentUser,
 		getProfile,
@@ -219,6 +247,7 @@
 	} = useStatusBar()
 
 	const subUrl = ref('')
+	const liveSubUrl = ref('')
 	const colOptions = [{
 			value: 3,
 			label: '大'
@@ -313,13 +342,15 @@
 			uni.hideLoading()
 			uni.showToast({
 				title: '已退出',
-				icon: 'success'
+				icon: 'success',
+				duration: 2000
 			})
 		} catch (e) {
 			uni.hideLoading()
 			uni.showToast({
 				title: '退出失败',
-				icon: 'none'
+				icon: 'none',
+				duration: 2000
 			})
 		}
 	}
@@ -335,12 +366,14 @@
 			showAvatarPicker.value = false
 			uni.showToast({
 				title: '头像已更换',
-				icon: 'success'
+				icon: 'success',
+				duration: 2000
 			})
 		} catch (e) {
 			uni.showToast({
 				title: '保存失败',
-				icon: 'none'
+				icon: 'none',
+				duration: 2000
 			})
 		} finally {
 			avatarLoading.value = false
@@ -364,7 +397,8 @@
 		if (!nickname) {
 			uni.showToast({
 				title: '昵称不能为空',
-				icon: 'none'
+				icon: 'none',
+				duration: 2000
 			})
 			return
 		}
@@ -386,12 +420,14 @@
 			showProfileEditor.value = false
 			uni.showToast({
 				title: '资料已保存',
-				icon: 'success'
+				icon: 'success',
+				duration: 2000
 			})
 		} catch (e) {
 			uni.showToast({
 				title: '保存失败',
-				icon: 'none'
+				icon: 'none',
+				duration: 2000
 			})
 		} finally {
 			saveLoading.value = false
@@ -462,12 +498,14 @@
 						cacheSize.value = '0 B'
 						uni.showToast({
 							title: '缓存已清除',
-							icon: 'success'
+							icon: 'success',
+							duration: 2000
 						})
 					} catch (e) {
 						uni.showToast({
 							title: '清除失败',
-							icon: 'none'
+							icon: 'none',
+							duration: 2000
 						})
 					}
 				}
@@ -491,8 +529,9 @@
 		setSetting('long_press_speed', val)
 		uni.$emit('longPressSpeedChanged', val)
 		uni.showToast({
-			title: `播放器默认长按倍速已设为${val}x`,
-			icon: 'none'
+			title: `播放器长按倍速已设为${val}x`,
+			icon: 'none',
+			duration: 3000
 		})
 	}
 
@@ -510,37 +549,49 @@
 	async function submitSub() {
 		const url = subUrl.value.trim()
 		if (!url) return
+		logSection('提交订阅')
+		addLog('MINE', 'submitSub 开始 url=' + url.slice(0, 50))
+		uni.showLoading({
+			title: '加载订阅...'
+		})
 		try {
-			uni.showLoading({
-				title: '加载订阅...'
-			})
-			await apiInit(url)
+			const t0 = Date.now()
+			await ensureInit(url)
+			addLog('MINE', `ensureInit 完成 (${Date.now() - t0}ms)`)
 			addSubHistory(url)
 			setSubUrl(url)
-			try {
-				const siteData = await getSites()
-				updateSites(siteData)
-			} catch (e2) {
-				/* ignore */
-			}
-			// 直播链路初始化（同一订阅源中的 lives 字段）
-			try {
-				await liveInit(url)
-			} catch (e3) {
-				/* 没有直播数据不报错 */
-			}
-			const data = await home()
-			updateHome(data)
-			uni.$emit('subUpdated')
+			// 订阅源已生效，隐藏 loading
 			uni.hideLoading()
 			uni.showToast({
 				title: '订阅成功',
-				icon: 'success'
+				icon: 'success',
+				duration: 2000
 			})
 			subUrl.value = ''
+			addLog('MINE', 'submitSub 订阅源设置完成')
+			// 后台：获取站点元数据（不阻塞 UI）
+			getSites().then(siteData => {
+				addLog('MINE', `getSites 完成 sites=${siteData ? siteData.length : 0}`)
+				if (siteData) updateSites(siteData)
+			}).catch(e2 => {
+				addLog('MINE', 'getSites 失败: ' + (e2?.message || ''))
+			})
+			// 拉首页数据并 updateHome，对齐 index.vue 注释承诺：mine.vue 拉完后 subUpdated 处理器直接同步即可
+			try {
+				const homeData = await apiHome()
+				addLog('MINE',
+					`apiHome 完成 list=${(homeData?.list || []).length} classes=${(homeData?.['class'] || homeData?.classes || []).length}`
+				)
+				updateHome(homeData)
+			} catch (e3) {
+				addLog('MINE', 'apiHome 失败: ' + (e3?.message || ''))
+			}
+			// 通知首页加载数据（此时 store.homeList 已填充，index.vue subUpdated 处理器直接同步）
+			uni.$emit('subUpdated')
 		} catch (e) {
 			uni.hideLoading()
 			const msg = e && e.message ? e.message : '订阅加载失败'
+			addLog('MINE', 'submitSub 失败: ' + msg)
 			if (msg.length > 20) {
 				uni.showModal({
 					title: '订阅失败',
@@ -550,10 +601,29 @@
 			} else {
 				uni.showToast({
 					title: msg,
-					icon: 'none'
+					icon: 'none',
+					duration: 3000
 				})
 			}
 		}
+	}
+
+	async function submitLiveSub() {
+		const url = liveSubUrl.value.trim()
+		if (!url) return
+		logSection('提交直播源')
+		addLog('MINE', 'submitLiveSub 开始 url=' + url.slice(0, 50))
+		addLiveSubHistory(url)
+		setLiveSubUrl(url)
+		uni.showToast({
+			title: '直播源已设置',
+			icon: 'success',
+			duration: 2000
+		})
+		liveSubUrl.value = ''
+		addLog('MINE', 'submitLiveSub 完成')
+		// 预热直播初始化：拉订阅 JSON + 解析全频道需 5-10s，提前触发避免切卫视页等待
+		liveInit(url).catch(e => addLog('MINE', 'submitLiveSub liveInit 预热失败: ' + (e?.message || '')))
 	}
 
 	function goPage(page) {
@@ -583,8 +653,24 @@
 			data: url,
 			success: () => {
 				uni.showToast({
-					title: '已复制订阅地址',
-					icon: 'success'
+					title: '已复制点播源地址',
+					icon: 'success',
+					duration: 2000
+				})
+			}
+		})
+	}
+
+	function copyLiveSubUrl() {
+		const url = store.liveSubUrl
+		if (!url) return
+		uni.setClipboardData({
+			data: url,
+			success: () => {
+				uni.showToast({
+					title: '已复制直播源地址',
+					icon: 'success',
+					duration: 2000
 				})
 			}
 		})
@@ -854,6 +940,19 @@
 		}
 	}
 
+	/* 订阅源分组间距（点播/直播组之间分隔线） */
+	.sub-group {
+		padding-bottom: 24rpx;
+		margin-bottom: 24rpx;
+		border-bottom: 1rpx solid var(--border);
+	}
+
+	.sub-group:last-of-type {
+		padding-bottom: 0;
+		margin-bottom: 0;
+		border-bottom: none;
+	}
+
 	/* ========== 设置项 ========== */
 	.setting-item {
 		display: flex;
@@ -963,7 +1062,7 @@
 		justify-content: space-between;
 		font-size: 24rpx;
 		color: var(--text-secondary);
-		margin-top: 10rpx;
+		margin-top: 20rpx;
 		gap: 12rpx;
 
 		&-text {
@@ -1011,17 +1110,15 @@
 	.img-size-btn {
 		flex: 1;
 		display: flex;
-		flex-direction: column;
 		align-items: center;
+		justify-content: center;
 		gap: 4rpx;
 		padding: 16rpx 0;
 		border-radius: 12rpx;
 		background: var(--bg-primary);
-		transition: all 0.2s;
 
 		&.active {
 			background: rgba($theme-accent, 0.12);
-			border: 2rpx solid $theme-accent;
 		}
 
 		&:active {

@@ -5,9 +5,11 @@
 			<video id="live-player" :key="videoKey" :src="videoUrl" :autoplay="hasSource" :muted="muted"
 				:controls="isFullscreen" :page-gesture="true" :show-mute-btn="true" :enable-progress-gesture="false"
 				object-fit="contain" :title="currentChannelName" :enable-play-gesture="true" :vslide-gesture="true"
-				:vslide-gesture-in-fullscreen="true" :mobilenet-hint-type="1" :http-cache="false" :is-live="true"
-				play-btn-position="center" :rate="playbackRate" style="width: 100%; height: 100%" @error="onVideoError"
-				@fullscreenchange="onFullscreenChange" @play="onPlay" @pause="onPause" />
+				:vslide-gesture-in-fullscreen="true" :mobilenet-hint-type="1" :http-cache="false"
+				play-btn-position="center" :rate="playbackRate" :is-live="true" :header="videoHeaders"
+				:play-strategy="2" style="width: 100%; height: 100%" @error="onVideoError"
+				@fullscreenchange="onFullscreenChange" @play="onPlay" @pause="onPause"
+				@waiting="onWaiting" @timeupdate="onTimeupdate" @loadedmetadata="onLoadedmetadata" />
 
 			<!-- 频道信息浮层（非全屏时显示在播放器上方） -->
 			<view class="player-info" v-if="currentChannelName && !isFullscreen">
@@ -17,10 +19,14 @@
 				</view>
 			</view>
 
-			<!-- 加载/错误提示 -->
+			<!-- 加载/错误/待播放提示 -->
 			<view class="player-status" v-if="!hasSource && loading">
 				<uni-icons type="spinner-cycle" size="36" color="#888" />
-				<text class="status-text">加载中...</text>
+				<text class="status-text">{{ currentChannel ? '正在获取播放地址...' : '正在加载卫视配置...' }}</text>
+			</view>
+			<view class="player-status" v-else-if="pendingUrl && !hasSource">
+				<uni-icons type="play" size="40" color="#fe8027" />
+				<text class="status-text">点击播放</text>
 			</view>
 			<view class="player-status" v-else-if="errorMsg">
 				<uni-icons type="closeempty" size="36" color="#fe8027" />
@@ -45,6 +51,12 @@
 			<view class="empty-hint" v-if="groups.length === 0 && !loading">
 				<text class="empty-text" v-if="!store.subUrl">请先在"我的"页面设置订阅源</text>
 				<text class="empty-text" v-else>{{ errorMsg || '未解析到卫视分组，请检查订阅源是否包含 lives 字段' }}</text>
+			</view>
+
+			<!-- 分组切换加载中（切分组时 channels 暂空，loading=true 期间显示提示） -->
+			<view class="empty-hint" v-if="groups.length > 0 && channels.length === 0 && loading">
+				<uni-icons type="spinner-cycle" size="28" color="#888" />
+				<text class="empty-text">正在加载频道列表...</text>
 			</view>
 
 			<!-- 频道列表 -->
@@ -95,6 +107,9 @@
 				</cover-view>
 			</cover-view>
 		</cover-view>
+
+		<!-- 调试面板 -->
+		<DebugPanel />
 	</view>
 </template>
 
@@ -117,34 +132,56 @@
 		store
 	} from '@/utils/appState.js'
 	import {
-		liveInit,
 		liveGetGroups,
 		liveGetChannels,
-		liveGetUrl
+		liveGetUrl,
+		ensureLiveInit
 	} from '@/utils/api.js'
 	import {
 		getSetting
 	} from '@/utils/store.js'
+	import {
+		addLog
+	} from '@/utils/debugLog.js'
+	import {
+		logSection
+	} from '@/utils/debugLog.js'
+	import DebugPanel from '@/components/debug-panel.vue'
+	import {
+		useVideoPlayer
+	} from '@/utils/useVideoPlayer.js'
 
-	// ===== 状态 =====
+	// ===== 播放器共享状态（useVideoPlayer） =====
+	const {
+		videoKey,
+		muted,
+		playbackRate,
+		isFullscreen,
+		createVideoContext,
+		getVideoContext,
+		setControlsTimer,
+		clearControlsTimer,
+		exitFullscreen,
+	} = useVideoPlayer('live-player')
+
+	// ===== 页面独有状态 =====
 	const groups = ref([])
 	const channels = ref([])
 	const currentGroup = ref('')
 	const currentChannel = ref(null)
 	const videoUrl = ref('')
-	const videoKey = ref(0)
+	const videoHeaders = ref({})
 	const hasSource = ref(false)
-	const loading = ref(false)
+	const pendingUrl = ref('')
+	const pendingHeaders = ref({})
+	// 切页即显示 loading（秒切体感）：initLive 会重置为 true，finally 切 false
+	// uni-app onMounted 异步触发，若 loading 初值 false 切页后有白屏间隙
+	const loading = ref(true)
 	const errorMsg = ref('')
-	const isFullscreen = ref(false)
 	const showFSControls = ref(false)
-	const muted = ref(true)
-	const playbackRate = ref(1)
 	const currentLine = ref(0)
 	const lineCount = ref(1)
 	const loadMoreStatus = ref('more')
-	let videoContext = null
-	let fsTimer = null
 	let channelList = {} // 按分组缓存频道列表
 	let isInitialized = false // 防止重复初始化
 
@@ -158,6 +195,7 @@
 
 	// ===== 生命周期 =====
 	onMounted(() => {
+		logSection('卫视页加载')
 		muted.value = getSetting('video_muted', true)
 		uni.$on('mutedChanged', (v) => {
 			muted.value = v
@@ -167,6 +205,13 @@
 	})
 
 	onShow(() => {
+		// 切回时如果已有播放源，恢复播放（onHide 时暂停了）
+		if (hasSource.value) {
+			nextTick(() => {
+				const ctx = createVideoContext()
+				if (ctx) ctx.play()
+			})
+		}
 		// 如果还没初始化或订阅已变更，重新加载
 		if (!isInitialized) {
 			initLive()
@@ -174,19 +219,23 @@
 	})
 
 	onHide(() => {
-		clearFSTimer()
+		clearControlsTimer()
+		// 切走时暂停视频，节省流量和电量
+		const ctx = getVideoContext()
+		if (ctx) ctx.pause()
 	})
 
 	onBeforeUnmount(() => {
 		uni.$off('mutedChanged')
 		uni.$off('subUpdated', onSubUpdated)
-		clearFSTimer()
+		clearControlsTimer()
 	})
 
 	/** 订阅源变更时重新加载 */
 	function onSubUpdated() {
 		isInitialized = false
 		channelList = {}
+		pendingUrl.value = ''
 		currentChannel.value = null
 		hasSource.value = false
 		videoUrl.value = ''
@@ -195,37 +244,35 @@
 
 	// ===== 初始化 =====
 	async function initLive() {
-
-		if (!store.subUrl) {
-	
+		const liveUrl = store.liveSubUrl || store.subUrl
+		addLog('LIVE', 'initLive 开始 liveUrl=' + (liveUrl ? liveUrl.slice(0, 40) : '空'))
+		if (!liveUrl) {
+			addLog('LIVE', 'initLive 跳过：无直播源地址')
 			loading.value = false
 			return
 		}
 		loading.value = true
 		errorMsg.value = ''
 		try {
-			// 主动初始化直播订阅源（不依赖 App.vue initApp 的时序，避免静默失败）
-			try {
-		
-				const initRet = await liveInit(store.subUrl)
-		
-			} catch (e) {
-		
-				errorMsg.value = '直播订阅初始化失败: ' + (e.message || '')
-			}
-	
+			// 确保直播插件已初始化（缓存 Promise，重复调用不阻塞）
+			const t0 = Date.now()
+			await ensureLiveInit(liveUrl)
+			addLog('LIVE', `ensureLiveInit 完成 (${Date.now() - t0}ms)`)
+
+			const t1 = Date.now()
 			const gList = await liveGetGroups()
-	
+			addLog('LIVE', `liveGetGroups 完成 (${Date.now() - t1}ms) groups=${gList ? gList.length : 0}`)
+
 			groups.value = gList || []
 			if (groups.value.length > 0) {
-		
 				await switchGroup(groups.value[0].name)
 			} else {
-		
+				addLog('LIVE', '无分组数据')
 			}
 			isInitialized = true
+			addLog('LIVE', 'initLive 全部完成')
 		} catch (e) {
-	
+			addLog('LIVE', 'initLive 异常: ' + (e.message || ''))
 			errorMsg.value = '加载卫视数据失败: ' + (e.message || '')
 		} finally {
 			loading.value = false
@@ -235,10 +282,11 @@
 	// ===== 分组切换 =====
 	async function switchGroup(name) {
 		if (!name) return
+		addLog('LIVE', `switchGroup -> ${name} cached=${!!channelList[name]}`)
 
 		// 相同分组且有缓存时跳过
 		if (name === currentGroup.value && channels.value.length > 0) {
-	
+			addLog('LIVE', `switchGroup 跳过：同分组且有数据`)
 			return
 		}
 		currentGroup.value = name
@@ -246,63 +294,95 @@
 		errorMsg.value = ''
 		// 先检查缓存
 		if (channelList[name]) {
-	
 			channels.value = channelList[name]
 			loading.value = false
+			addLog('LIVE', `switchGroup 命中缓存 channels=${channels.value.length}`)
 			return
 		}
 		try {
-	
+			const t0 = Date.now()
 			const chList = await liveGetChannels(name)
-	
-			if (chList && chList.length > 0) {
-		
-			}
-			channelList[name] = chList || []
+			addLog('LIVE', `liveGetChannels 完成 (${Date.now() - t0}ms) chs=${chList ? chList.length : 0}`)
+
+		channelList[name] = (chList || []).map((ch, i) => {
+				// 仅前3个频道打印详细日志，避免大列表下 JSON.stringify 阻塞渲染
+				if (i < 3) {
+					const f = ch.urls ? JSON.stringify(ch.urls).slice(0, 100) : 'null'
+					const all = JSON.stringify(ch).slice(0, 200)
+					addLog('LIVE', `频道[${i}]: name=${ch.name} urls=${f} 完整=${all}`)
+				}
+				return {
+					...ch,
+					_group: name
+				}
+			})
 			channels.value = channelList[name]
 		} catch (e) {
-	
+			addLog('LIVE', 'switchGroup 异常: ' + (e.message || ''))
 			errorMsg.value = '加载频道列表失败'
 		} finally {
 			loading.value = false
 		}
 	}
 
+	// ===== 应用播放地址：重建 video 组件（key 变更）后创建 context 并手动 play =====
+	// App-Plus 下 <video> 的 autoplay 对动态 src 不可靠，必须手动 play；
+	// videoKey++ 会重建组件，旧 videoContext 失效，需在 nextTick 后重新创建
+	// 同步 header：uni-app <video> 的 header 属性（App 3.1.19+）直接注入 Referer/UA，比 LiveProxy 代理透传更可靠
+	function applyVideoUrl(url) {
+		videoKey.value++
+		videoUrl.value = url
+		videoHeaders.value = pendingHeaders.value || {}
+		hasSource.value = true
+		addLog('LIVE', `applyVideoUrl url=${url ? url.slice(0, 60) : '空'} headerKeys=${Object.keys(videoHeaders.value).length} videoKey=${videoKey.value}`)
+		nextTick(() => {
+			const ctx = createVideoContext()
+			addLog('LIVE', `applyVideoUrl nextTick ctx=${ctx ? '已创建' : 'null'}，调 play()`)
+			if (ctx) ctx.play()
+		})
+	}
+
 	// ===== 频道切换 =====
 	async function switchChannel(ch) {
 		if (!ch || !ch.name) return
+		logSection('切换频道')
+		addLog('LIVE', `switchChannel -> ${ch.name} urls=${ch.urls ? ch.urls.length : 0}`)
 
-		if (ch.name === currentChannel.value?.name && hasSource.value) {
-	
+		if (ch.name === currentChannel.value?.name && (hasSource.value || pendingUrl.value)) {
+			addLog('LIVE', `switchChannel 跳过：同频道`)
 			return
 		}
 		currentChannel.value = ch
-		currentLine.value = ch.currentLine || 0
+		currentLine.value = Number(ch.currentLine) || 0
 		lineCount.value = (ch.urls && ch.urls.length) || 1
 
 		hasSource.value = false
 		videoUrl.value = ''
+		pendingUrl.value = ''
+		pendingHeaders.value = {}
 		loading.value = true
 		errorMsg.value = ''
 		try {
-	
-			const result = await liveGetUrl(ch.name, currentGroup.value, currentLine.value)
-	
+			const t0 = Date.now()
+			const result = await liveGetUrl(ch.displayName, ch._group || currentGroup.value || '', currentLine.value)
+			addLog('LIVE',
+				`liveGetUrl 完成 (${Date.now() - t0}ms) url=${result && result.url ? result.url.slice(0, 60) : '空'} header=${result && result.header ? Object.keys(result.header).length : 0}keys`)
+
 			if (result && result.url) {
-		
-				videoKey.value++
-				videoUrl.value = result.url
-				hasSource.value = true
+				// 只存 URL+header 不播放，等待用户点击播放按钮
+				pendingUrl.value = result.url
+				// uni-app <video> header 属性要 Object 形式；补默认 UA 兜底（咪咕等服务器校验 UA）
+				const h = Object.assign({}, result.header || {})
+				if (!h['User-Agent'] && !h['user-agent']) h['User-Agent'] = 'okhttp/4.12.0'
+				pendingHeaders.value = h
 			} else {
-		
 				errorMsg.value = '未获取到播放地址'
 			}
 		} catch (e) {
-	
+			addLog('LIVE', `switchChannel 异常: ${e.message || ''}`)
 			errorMsg.value = e.message || '获取播放地址失败'
 			// 尝试降级到下一线路
 			if (lineCount.value > 1) {
-		
 				tryAutoSwitchLine()
 			}
 		} finally {
@@ -320,14 +400,19 @@
 		if (target === currentChannel.value) {
 			hasSource.value = false
 			videoUrl.value = ''
+			pendingUrl.value = ''
 			loading.value = true
 			errorMsg.value = ''
 			try {
-				const result = await liveGetUrl(target.name, currentGroup.value, line)
+				const result = await liveGetUrl(target.displayName, target._group || currentGroup.value || '',
+					'', line)
 				if (result && result.url) {
-					videoKey.value++
-					videoUrl.value = result.url
-					hasSource.value = true
+					pendingUrl.value = result.url
+					const h = Object.assign({}, result.header || {})
+					if (!h['User-Agent'] && !h['user-agent']) h['User-Agent'] = 'okhttp/4.12.0'
+					pendingHeaders.value = h
+				} else {
+					errorMsg.value = '未获取到播放地址'
 				}
 			} catch (e) {
 				errorMsg.value = e.message || '换源失败'
@@ -337,26 +422,32 @@
 		}
 	}
 
-	// 自动尝试切下一线路
+	// 自动尝试切下一线路（存储为待播放，不自动播放）
 	async function tryAutoSwitchLine() {
 		if (currentChannel.value && lineCount.value > 1) {
 			const nextLine = (currentLine.value + 1) % lineCount.value
 			if (nextLine !== currentLine.value) {
 				currentChannel.value.currentLine = nextLine
 				currentLine.value = nextLine
+				hasSource.value = false
+				videoUrl.value = ''
+				pendingUrl.value = ''
+				errorMsg.value = '正在尝试下一线路...'
 				try {
-					const result = await liveGetUrl(currentChannel.value.name, currentGroup.value, nextLine)
+					const result = await liveGetUrl(currentChannel.value.displayName,
+						currentChannel.value._group || currentGroup.value || '', nextLine)
 					if (result && result.url) {
-						videoKey.value++
-						videoUrl.value = result.url
-						hasSource.value = true
-						errorMsg.value = ''
-						uni.showToast({
-							title: `已切换至源${nextLine + 1}`,
-							icon: 'none'
-						})
+						pendingUrl.value = result.url
+						const h = Object.assign({}, result.header || {})
+						if (!h['User-Agent'] && !h['user-agent']) h['User-Agent'] = 'okhttp/4.12.0'
+						pendingHeaders.value = h
+						errorMsg.value = `源${nextLine + 1} 已就绪，点击播放`
+					} else {
+						errorMsg.value = '未获取到播放地址'
 					}
-				} catch {}
+				} catch {
+					errorMsg.value = '所有线路均不可用'
+				}
 			}
 		}
 	}
@@ -376,6 +467,13 @@
 
 	// ===== 全屏控制 =====
 	function onPlayerTap() {
+		addLog('LIVE', `onPlayerTap 点击 pendingUrl=${pendingUrl.value ? '有' : '空'} hasSource=${hasSource.value}`)
+		// 有待播放的直播流 → 触发放映
+		if (pendingUrl.value) {
+			applyVideoUrl(pendingUrl.value)
+			pendingUrl.value = ''
+			return
+		}
 		if (!hasSource.value) return
 		if (!isFullscreen.value) {
 			enterFullscreen()
@@ -386,67 +484,60 @@
 
 	function enterFullscreen() {
 		nextTick(() => {
-			videoContext = videoContext || uni.createVideoContext('live-player')
-			videoContext.requestFullScreen({
+			const ctx = getVideoContext() || createVideoContext()
+			ctx.requestFullScreen({
 				direction: 0 // 自动横屏
 			})
 		})
-	}
-
-	function exitFullscreen() {
-		if (videoContext) {
-			videoContext.exitFullScreen()
-		}
 	}
 
 	function onFullscreenChange(e) {
 		isFullscreen.value = e.detail.fullscreen
 		if (e.detail.fullscreen) {
 			showFSControls.value = true
-			setFSTimer()
+			setControlsTimer(() => {
+				showFSControls.value = false
+			}, 4000)
 		} else {
 			showFSControls.value = false
-			clearFSTimer()
+			clearControlsTimer()
 		}
 	}
 
 	function toggleFSControls() {
 		showFSControls.value = !showFSControls.value
-		if (showFSControls.value) setFSTimer()
+		if (showFSControls.value) setControlsTimer(() => {
+			showFSControls.value = false
+		}, 4000)
 	}
 
 	function onToggleUI() {
 		toggleFSControls()
 	}
 
-	function setFSTimer() {
-		clearFSTimer()
-		fsTimer = setTimeout(() => {
-			showFSControls.value = false
-		}, 4000)
-	}
+	function onPlay() { addLog('LIVE', '▶️ <video> @play 已开始播放') }
 
-	function clearFSTimer() {
-		if (fsTimer) {
-			clearTimeout(fsTimer)
-			fsTimer = null
-		}
-	}
-
-	function onPlay() {}
-
-	function onPause() {}
+	function onPause() { addLog('LIVE', '⏸️ <video> @pause 已暂停') }
 
 	// ===== 错误处理 =====
-	function onVideoError() {
+	function onVideoError(e) {
+		// uni-app <video> @error 事件 e.detail.errMsg 含播放器具体错误（如 403/格式不支持/解码失败）
+		const errMsg = e?.detail?.errMsg || e?.errMsg || JSON.stringify(e?.detail || {})
+		addLog('LIVE', `⚠️ <video> @error: ${errMsg}`)
 		if (currentChannel.value) {
 			uni.showToast({
-				title: '播放失败，尝试切换线路',
-				icon: 'none'
+				title: '播放失败：' + errMsg.slice(0, 50),
+				icon: 'none',
+				duration: 3000
 			})
 			tryAutoSwitchLine()
 		}
 	}
+
+	// ===== 播放器事件追踪（定位是哪个环节断：loadedmetadata→waiting→play→timeupdate） =====
+	function onWaiting() { addLog('LIVE', '⏳ <video> @waiting 缓冲中') }
+	function onTimeupdate(e) { addLog('LIVE', `▶️ <video> @timeupdate currentTime=${e?.detail?.currentTime || 0}s`) }
+	function onLoadedmetadata(e) { addLog('LIVE', `✅ <video> @loadedmetadata width=${e?.detail?.width} height=${e?.detail?.height} duration=${e?.detail?.duration}`) }
 
 	function onLoadMore() {
 		loadMoreStatus.value = 'noMore'

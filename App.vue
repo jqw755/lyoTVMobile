@@ -25,17 +25,17 @@
 	} from '@/utils/theme.js'
 
 	onMounted(async () => {
-		// 1. 读取主题（theme ref 响应式，各页面 :style="themeStyle" 自动跟随）
-		initTheme()
-		// 2. 从本地缓存加载偏好（未登录也能用上次设定）
-		loadLocalPreferences()
-		// 3. 初始化登录态（已登录则用云端偏好覆盖本地）
-		await initAuth()
-		// 4. 登录后重新读取主题（云端可能覆盖了本地缓存的值）
-		initTheme()
-		// 5. 启动订阅源并拉取首页
-		initApp()
-		// 6. 监听登录/退出导致的偏好变化
+	 // 1. 读取主题（theme ref 响应式，各页面 :style="themeStyle" 自动跟随）
+	 initTheme()
+	 // 2. 从本地缓存加载偏好（未登录也能用上次设定）
+	 loadLocalPreferences()
+	 // 3. 初始化登录态（已登录则用云端偏好覆盖本地）
+	 await initAuth()
+	 // 4. 登录后重新读取主题（云端可能覆盖了本地缓存的值）
+	 initTheme()
+	 // 5. 启动订阅源（await 确保首页 onMounted 时插件已就绪）
+	 await initApp()
+	 // 6. 监听登录/退出导致的偏好变化
 		uni.$on('preferencesLoaded', (prefs) => {
 			if (prefs && typeof prefs === 'object' && 'theme' in prefs) {
 				initTheme()

@@ -1,8 +1,8 @@
 <template>
 	<view class="page" :style="themeStyle">
 		<view class="header">
-			<text class="title">登录</text>
-			<text class="subtitle">登录后收藏和历史将同步到云端</text>
+			<text class="title">注册</text>
+			<text class="subtitle">注册后影视收藏将同步到云端</text>
 		</view>
 
 		<view class="form">
@@ -15,22 +15,23 @@
 				<input v-model="password" class="input" password placeholder="输入密码" placeholder-class="ph"
 					maxlength="18" />
 			</view>
+			<view class="field">
+				<text class="label">确认密码</text>
+				<input v-model="confirmPassword" class="input" password placeholder="再次输入密码" placeholder-class="ph"
+					maxlength="18" />
+			</view>
 
-			<view class="btn" @tap="onLogin" v-if="!loading">
-				<text>登录</text>
+			<view class="btn" @tap="onRegister" v-if="!loading">
+				<text>注册</text>
 			</view>
 			<view class="btn loading-btn" v-else>
-				<view class="loading-icon"><uni-icons type="spinner-cycle" size="18" color="#fff" /></view>
-				<text>登录中...</text>
-			</view>
+			  <view class="loading-icon"><uni-icons type="spinner-cycle" size="18" color="#fff" /></view>
+			  <text>注册中...</text>
+			 </view>
 		</view>
 
-		<view class="skip" @tap="goBack">
-			<text>暂不登录，继续浏览</text>
-		</view>
-
-		<view class="register-link" @tap="goRegister">
-			<text>没有账号？去注册</text>
+		<view class="login-link" @tap="goLogin">
+			<text>已有账号？去登录</text>
 		</view>
 	</view>
 </template>
@@ -43,17 +44,20 @@
 		themeStyle
 	} from '@/utils/theme.js'
 	import {
-		login
+		register
 	} from '@/utils/store.js'
 
 	const username = ref('')
 	const password = ref('')
+	const confirmPassword = ref('')
 	const loading = ref(false)
 
-	async function onLogin() {
+	async function onRegister() {
 		const u = username.value.trim()
-		const p = password.value.trim()
-		if (!u || !p) {
+		const p = password.value
+		const cp = confirmPassword.value
+
+		if (!u || !p || !cp) {
 			uni.showToast({
 				title: '请填写完整表单',
 				icon: 'none',
@@ -61,45 +65,56 @@
 			})
 			return
 		}
+		if (u.length < 3) {
+			uni.showToast({
+				title: '用户名至少3个字符',
+				icon: 'none',
+				duration: 3000
+			})
+			return
+		}
+		if (p.length < 6) {
+			uni.showToast({
+				title: '密码至少6个字符',
+				icon: 'none',
+				duration: 3000
+			})
+			return
+		}
+		if (p !== cp) {
+			uni.showToast({
+				title: '两次密码不一致',
+				icon: 'none',
+				duration: 3000
+			})
+			return
+		}
 		loading.value = true
 		try {
-			await login(u, p)
+			await register(u, p)
 			uni.showToast({
-				title: '登录成功',
+				title: '注册成功，等待管理员审批',
 				icon: 'success',
 				duration: 3000
 			})
 			setTimeout(() => {
-				const pages = getCurrentPages()
-				if (pages.length <= 1) {
-					uni.switchTab({
-						url: '/pages/mine/mine'
-					})
-				} else {
-					uni.navigateBack()
-				}
-			}, 500)
+				uni.navigateBack()
+			}, 1500)
 		} catch (e) {
 			uni.showToast({
-				title: e.message || '登录失败',
+				title: e.message || '注册失败',
 				icon: 'none',
 				duration: 3000
 			})
 		} finally {
-			// 无论成功失败，清除密码变量
 			password.value = ''
+			confirmPassword.value = ''
 			loading.value = false
 		}
 	}
 
-	function goBack() {
+	function goLogin() {
 		uni.navigateBack()
-	}
-
-	function goRegister() {
-		uni.navigateTo({
-			url: '/pages/register/register'
-		})
 	}
 </script>
 
@@ -186,46 +201,13 @@
 	}
 
 	@keyframes spin {
-		from {
-			transform: rotate(0deg);
-		}
-
-		to {
-			transform: rotate(360deg);
-		}
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
 	}
 
-	.switch {
+	.login-link {
 		text-align: center;
-		margin-top: 36rpx;
-		padding: 16rpx 0;
-
-		text {
-			font-size: 26rpx;
-			color: $theme-accent;
-		}
-
-		&:active {
-			opacity: 0.6;
-		}
-	}
-
-	.skip {
-		text-align: center;
-		margin: 50rpx 0 20rpx;
-
-		text {
-			font-size: 24rpx;
-			color: var(--text-secondary);
-		}
-
-		&:active {
-			opacity: 0.6;
-		}
-	}
-
-	.register-link {
-		text-align: center;
+		margin-top: 50rpx;
 
 		text {
 			font-size: 24rpx;

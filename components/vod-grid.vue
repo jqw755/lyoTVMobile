@@ -1,14 +1,14 @@
 <template>
 	<view class="grid-wrapper">
 		<view class="grid" :style="{ gap: gap + 'rpx' }">
-			<view v-for="item in items" :key="item.vod_id || item._key" class="grid-item"
+			<view v-for="(item, idx) in items" :key="(item.vod_id && item.vod_id !== '0') ? item.vod_id : (item._key || ('idx-' + idx))" class="grid-item"
 				:style="{ width: itemWidth + 'rpx' }" @tap="onItemTap(item)">
 				<view class="grid-card">
 					<view class="grid-poster-wrap">
 						<image class="grid-poster" :src="item.vod_pic" mode="aspectFill" lazy-load />
-						<text v-if="item.vod_remarks && item.vod_remarks !== '0'" class="grid-badge">
-							{{ item.vod_remarks }}
-						</text>
+						<text v-if="formatBadge(item.vod_remarks)" class="grid-badge">
+						  {{ formatBadge(item.vod_remarks) }}
+						 </text>
 						<slot name="overlay" :item="item" />
 					</view>
 					<view class="grid-info">
@@ -21,11 +21,19 @@
 </template>
 
 <script>
+	// 格式化角标：去除"评分"前缀和尾部标点，只保留数值，0不展示
+	function formatBadge(text) {
+		if (!text || text === '0') return ''
+		const cleaned = text.replace(/^评分|[，,。、；：""''「」【】《》（）!！?？\s]+$/g, '')
+		if (cleaned === '0') return ''
+		return cleaned
+	}
+
 	// 从「我的」页面设置的尺寸级别 → 卡片基础宽度(rpx)
 	// 3=大图(宽卡片), 4=中图(适中), 5=小图(窄卡片)
 	const SIZE_WIDTH_MAP = {
-		3: 210,
-		4: 155,
+		3: 200,
+		4: 150,
 		5: 120,
 	}
 	import {
@@ -62,7 +70,7 @@
 		},
 		methods: {
 			loadSize() {
-				const level = this.gridSize ?? getSetting('grid_cols', 4)
+				const level = this.gridSize ?? getSetting('grid_cols', 3)
 				this.itemWidth = SIZE_WIDTH_MAP[level] || SIZE_WIDTH_MAP[3]
 			},
 			onItemTap(item) {
@@ -108,7 +116,7 @@
 
 	.grid-poster {
 		width: 100%;
-		height: 200rpx;
+		height: 220rpx;
 		display: block;
 		background: var(--card-hover);
 	}

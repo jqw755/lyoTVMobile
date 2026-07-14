@@ -5,10 +5,13 @@
 import { reactive } from 'vue'
 
 const SUB_KEY = 'lyotv_sub_url'
+const LIVE_SUB_KEY = 'lyotv_live_sub_url'
 
 export const store = reactive({
-  /** 当前订阅地址 */
+  /** 当前点播订阅地址 */
   subUrl: uni.getStorageSync(SUB_KEY) || '',
+  /** 当前直播订阅地址（独立于点播源） */
+  liveSubUrl: uni.getStorageSync(LIVE_SUB_KEY) || '',
   /** 首页分类列表 */
   classes: [],
   /** 首页推荐列表 */
@@ -20,6 +23,11 @@ export const store = reactive({
 export function setSubUrl(url) {
   store.subUrl = url
   uni.setStorageSync(SUB_KEY, url)
+}
+
+export function setLiveSubUrl(url) {
+  store.liveSubUrl = url
+  uni.setStorageSync(LIVE_SUB_KEY, url)
 }
 
 export function updateHome(data) {

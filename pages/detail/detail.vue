@@ -1,22 +1,8 @@
 <template>
-	<view class="status-page" :style="themeStyle" v-if="loading">
-		<uni-icons type="spinner-cycle" size="36" color="#888" />
-		<text class="status-text">加载中...</text>
-	</view>
-	<view class="status-page" :style="themeStyle" v-else-if="error">
-		<uni-icons type="closeempty" size="48" color="#888" />
-		<text class="status-text">加载失败</text>
-		<text class="status-detail" v-if="errorMsg">{{ errorMsg }}</text>
-		<text class="retry-btn" @tap="loadDetail">点击重试</text>
-	</view>
-	<view class="page" :style="themeStyle" v-else-if="vod">
+	<view class="page" :style="themeStyle">
 		<!-- 播放器 -->
 		<view class="player-area" @tap="onPlayerTap" @longpress="onLongPress" @touchend="onLongPressEnd"
 			@touchcancel="onLongPressEnd">
-			<!--
-        video 始终渲染，利用 poster 显示海报，
-        src 为空时显示原生播放按钮，用户点击触发 onVideoTap 获取真实地址
-      -->
 			<video id="detail-player" :key="videoKey" :src="videoUrl" :autoplay="autoPlay" :muted="muted"
 				:controls="true" :page-gesture="true" :show-mute-btn="true" :enable-progress-gesture="true"
 				object-fit="contain" :poster="vod?.vod_poster || ''" :title="vod?.vod_name || ''"
@@ -25,11 +11,22 @@
 				style="width: 100%; height: 100%" @error="onVideoError" @tap="onVideoTap"
 				@fullscreenchange="onFullscreenChange" />
 
+			<!-- 加载覆盖层（vod 数据到之前显示，不阻塞页面框架） -->
+			<view class="player-overlay" v-if="loading && !vod">
+			</view>
+			<!-- 错误覆盖层（vod 到之前） -->
+			<view class="player-overlay" v-else-if="error && !vod">
+				<uni-icons type="closeempty" size="48" color="#888" />
+				<text class="overlay-text">加载失败</text>
+				<text class="overlay-detail" v-if="errorMsg">{{ errorMsg }}</text>
+				<text class="retry-btn" @tap="loadDetail">点击重试</text>
+			</view>
+
 			<!-- 倍速控制（仅全屏展示） -->
 			<!-- 全圆倍速按钮 -->
 			<cover-view class="speed-btn" v-if="hasSource && isFullscreen && showSpeed && !showSidebar"
-				@tap="onSpeedBtnTap">
-				<cover-view class="speed-circle-txt">{{ displayRate }}</cover-view>
+			 @tap="onSpeedBtnTap">
+			 <cover-view class="speed-circle-txt">{{ getDisplayRate() }}</cover-view>
 			</cover-view>
 			<!-- 侧边栏遮罩 -->
 			<cover-view class="speed-mask" v-if="hasSource && isFullscreen && showSidebar" @tap="closeSidebar" />
@@ -58,56 +55,66 @@
 			</view>
 		</view>
 
-		<!-- 标题 -->
-		<view class="info-section">
-			<view class="title-row">
-				<text class="vod-title">{{ vod.vod_name }}</text>
-				<uni-icons :type="isFaved ? 'star-filled' : 'star'" :color="isFaved ? '#fe8027' : '#888'" size="22"
-					@tap="toggleFav" />
-			</view>
-			<view class="tags">
-				<text class="tag status" v-if="vod.vod_remarks && vod.vod_remarks !== '0'">{{
-          vod.vod_remarks
-        }}</text>
-				<text class="tag">{{ vod.vod_year }}</text><text class="tag">{{ vod.vod_area }}</text>
-				<text class="tag" v-if="vod.vod_director">{{ vod.vod_director }}</text>
-			</view>
-			<view class="source-row" v-if="flags.length > 0">
-				<uni-icons type="flag" size="14" color="#888" /><text class="source-label">
-					站源：</text>
-				<scroll-view class="source-tabs" scroll-x show-scrollbar="false">
-					<text v-for="f in flags" :key="f.flag" class="source-tab" :class="{ active: f.flag === activeFlag }"
-						@tap="switchFlag(f.flag)">{{ f.flag }}</text>
-				</scroll-view>
-			</view>
+		<!-- 加载占位（vod 数据到之前，信息区域不白屏） -->
+		<view class="loading-placeholder" v-if="loading && !vod">
+			<uni-icons type="spinner-cycle" size="20" color="#888" />
+			<text class="loading-placeholder-text">正在加载影片信息...</text>
 		</view>
 
-		<!-- 选集 -->
-		<view class="section" v-if="currentEpisodes.length > 0">
-			<view class="section-header">
-				<uni-icons type="list" size="16" color="#888" /><text class="section-title">
-					选集</text>
-				<text class="ep-count">共 {{ currentEpisodes.length }} 集</text>
+		<!-- 内容区域（vod 数据到后显示，不阻塞页面框架） -->
+		<view class="content-wrap" v-if="vod">
+			<!-- 标题 -->
+			<view class="info-section">
+				<view class="title-row">
+					<text class="vod-title">{{ vod.vod_name }}</text>
+					<uni-icons :type="isFaved ? 'star-filled' : 'star'" :color="isFaved ? '#fe8027' : '#888'" size="24"
+						@tap="toggleFav" />
+				</view>
+				<view class="tags">
+					<text class="tag status"
+						v-if="vod.vod_remarks && vod.vod_remarks !== '0'">{{ vod.vod_remarks }}</text>
+					<text class="tag">{{ vod.vod_year }}</text><text class="tag">{{ vod.vod_area }}</text>
+					<text class="tag" v-if="vod.vod_director">导演：{{ vod.vod_director }}</text>
+				</view>
+				<view class="source-row" v-if="flags.length > 0">
+					<uni-icons type="flag" size="14" color="#888" /><text class="source-label">站源：</text>
+					<scroll-view class="source-tabs" scroll-x show-scrollbar="false">
+						<text v-for="f in flags" :key="f.flag" class="source-tab"
+							:class="{ active: f.flag === activeFlag }" @tap="switchFlag(f.flag)">{{ f.flag }}</text>
+					</scroll-view>
+				</view>
 			</view>
-			<view class="episodes">
-				<text v-for="(ep, i) in displayEpisodes" :key="i" class="ep" :class="{ playing: i === currentIndex }"
-					@tap="playEpisode(i)">{{ ep.name }}</text>
-				<text v-if="currentEpisodes.length > COLLAPSE_LIMIT && !showAll" class="ep ep-more"
-					@tap="showAll = true">展开 {{ currentEpisodes.length - COLLAPSE_LIMIT }} 集
-					<uni-icons type="arrowdown" size="12" color="#fe8027" /></text>
+
+			<!-- 选集 -->
+			<view class="section" v-if="currentEpisodes.length > 0">
+				<view class="section-header">
+					<uni-icons type="list" size="16" color="#888" /><text class="section-title">选集</text>
+					<text class="ep-count">共 {{ currentEpisodes.length }} 集</text>
+				</view>
+				<view class="episodes">
+					<text v-for="(ep, i) in displayEpisodes" :key="i" class="ep"
+						:class="{ playing: i === currentIndex }" @tap="playEpisode(i)">{{ ep.name }}</text>
+					<text v-if="currentEpisodes.length > COLLAPSE_LIMIT && !showAll" class="ep ep-more"
+						@tap="showAll = true">展开 {{ currentEpisodes.length - COLLAPSE_LIMIT }} 集
+						<uni-icons type="arrowdown" size="12" color="#fe8027" /></text>
+				</view>
 			</view>
-		</view>
-		<view class="section" v-if="vod.vod_content">
-			<view class="section-header"><uni-icons type="info" size="16" color="#888" /><text class="section-title">
-					简介</text></view>
-			<text class="content" @tap="expand = !expand">{{ displayContent }}<text class="expand-btn"><uni-icons
-						:type="expand ? 'arrowup' : 'arrowdown'" size="12" color="#fe8027" />
-					{{ expand ? "收起" : "展开" }}</text></text>
-		</view>
-		<view class="section" v-if="vod.vod_actor">
-			<view class="section-header"><uni-icons type="person" size="16" color="#888" /><text class="section-title">
-					演员</text></view>
-			<text class="content">{{ vod.vod_actor }}</text>
+			<view class="section" v-if="vod.vod_content">
+				<view class="section-header">
+					<uni-icons type="info" size="16" color="#888" />
+					<text class="section-title">简介</text>
+				</view>
+				<text class="content" @tap="expand = !expand">{{ displayContent }}<text class="expand-btn">
+						{{ expand ? "收起" : "展开" }}
+						<uni-icons :type="expand ? 'up' : 'down'" size="12" color="#fe8027" />
+					</text>
+				</text>
+			</view>
+			<view class="section" v-if="vod.vod_actor">
+				<view class="section-header"><uni-icons type="person" size="16" color="#888" /><text
+						class="section-title">演员</text></view>
+				<text class="content">{{ vod.vod_actor }}</text>
+			</view>
 		</view>
 	</view>
 </template>
@@ -119,7 +126,9 @@
 		onMounted,
 		onBeforeUnmount
 	} from "vue";
-	import { themeStyle } from '@/utils/theme.js'
+	import {
+		themeStyle
+	} from '@/utils/theme.js'
 	import {
 		onLoad
 	} from "@dcloudio/uni-app";
@@ -129,16 +138,23 @@
 		searchSite
 	} from "@/utils/api.js";
 	import {
-	 addFavorite,
-	 removeFavorite,
-	 isFavorite,
-	 addHistory,
-	 getHistory,
-	 getSetting,
+		addFavorite,
+		removeFavorite,
+		isFavorite,
+		addHistory,
+		getHistory,
+		getSetting,
 	} from "@/utils/store.js";
 	import {
-	 store
+		addLog,
+		logSection
+	} from '@/utils/debugLog.js';
+	import {
+		store
 	} from "@/utils/appState.js";
+	import {
+		useVideoPlayer
+	} from '@/utils/useVideoPlayer.js';
 
 	const COLLAPSE_LIMIT = 30;
 
@@ -154,24 +170,25 @@
 	const errorMsg = ref("");
 	const hasSource = ref(false);
 	const videoUrl = ref("");
-	const videoKey = ref(0);
 	const autoPlay = ref(false);
-	const muted = ref(true);
 	const savedEpisode = ref("");
 	const savedProgress = ref(0);
-	const playbackRate = ref(1);
-	const speedOptions = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
-	const showSpeed = ref(false);
-	const isFullscreen = ref(false);
-	const showSidebar = ref(false);
 	const videoErrorMsg = ref("");
 	const switchingSource = ref(false);
 	const failedSiteKeys = ref(new Set());
 	const showLongPressHint = ref(false);
 	const longPressHintSpeed = ref(2);
-	let speedTimer = null;
 
-	const displayRate = computed(() => playbackRate.value.toFixed(1));
+	// ===== 播放器共享状态（useVideoPlayer） =====
+	const {
+		videoKey, muted, playbackRate, speedOptions,
+		showSpeed, showSidebar, isFullscreen,
+		createVideoContext,
+		setControlsTimer, clearControlsTimer,
+		selectSpeed, onSpeedBtnTap, closeSidebar,
+		showSpeedTemporarily, getDisplayRate,
+		onFullscreenChange, exitFullscreen,
+	} = useVideoPlayer('detail-player')
 
 	const COLLAPSE_LENGTH = 120;
 	const displayContent = computed(() => {
@@ -180,44 +197,7 @@
 		return text.slice(0, COLLAPSE_LENGTH) + "...";
 	});
 
-	function clearSpeedTimer() {
-		if (speedTimer) {
-			clearTimeout(speedTimer);
-			speedTimer = null;
-		}
-	}
-
-	function showSpeedTemporarily() {
-		showSpeed.value = true;
-		clearSpeedTimer();
-		speedTimer = setTimeout(() => {
-			showSpeed.value = false;
-		}, 4000);
-	}
-
-	function onFullscreenChange(e) {
-		isFullscreen.value = e.detail.fullscreen;
-		if (!e.detail.fullscreen) {
-			showSpeed.value = false;
-			showSidebar.value = false;
-		}
-	}
-
-	function onSpeedBtnTap() {
-		showSidebar.value = true;
-		clearSpeedTimer();
-	}
-
-	function selectSpeed(s) {
-		playbackRate.value = s;
-		showSidebar.value = false;
-		showSpeedTemporarily();
-	}
-
-	function closeSidebar() {
-		showSidebar.value = false;
-		showSpeedTemporarily();
-	}
+	// 倍速/全屏/定时器由 useVideoPlayer composable 提供
 	let pageId = "";
 	let pageKey = "";
 
@@ -236,6 +216,7 @@
 		pageKey = o?.key || "";
 	});
 	onMounted(() => {
+		logSection('详情页加载');
 		loadDetail();
 		muted.value = getSetting("video_muted", true);
 		uni.$on("mutedChanged", (v) => {
@@ -244,39 +225,44 @@
 	});
 	onBeforeUnmount(() => {
 		uni.$off("mutedChanged");
-		clearSpeedTimer();
+		clearControlsTimer();
+		// 离开详情页时停止视频播放，节省流量
+		try {
+			const ctx = createVideoContext()
+			if (ctx) ctx.stop()
+		} catch (e) {}
 	});
 
 	async function loadDetail() {
-	 if (!pageId) return;
-	 loading.value = true;
-	 error.value = false;
-	 errorMsg.value = "";
-	 try {
-	  let data;
+		if (!pageId) return;
+		loading.value = true;
+		error.value = false;
+		errorMsg.value = "";
+		try {
+			let data;
 
-	  data = await detail(pageId, pageKey);
+			data = await detail(pageId, pageKey);
 
-	  const item = data.list?.[0] || data.vod;
-	  if (!item) {
-	   error.value = true;
-	   errorMsg.value = "未获取到影片信息";
-	   return;
-	  }
+			const item = data.list?.[0] || data.vod;
+			if (!item) {
+				error.value = true;
+				errorMsg.value = "未获取到影片信息";
+				return;
+			}
 			vod.value = item;
 			uni.setNavigationBarTitle({
 				title: item.vod_name
 			});
 			if (!vod.value.site_key && pageKey) vod.value.site_key = pageKey;
-			 flags.value = item?.vodFlags || [];
-			 if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
+			flags.value = item?.vodFlags || [];
+			if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
 
-			 // 收藏状态（非阻塞，查不到或失败静默处理）
-			 isFavorite(pageId).then(v => isFaved.value = v).catch(() => {})
+			// 收藏状态（非阻塞，查不到或失败静默处理）
+			isFavorite(pageId).then(v => isFaved.value = v).catch(() => {})
 
-			 // 播放进度（从本地历史缓存恢复，同步无网络）
-			 const localHist = getHistory()
-			 const found = localHist.find((h) => h.vod_id === item.vod_id);
+			// 播放进度（从本地历史缓存恢复，同步无网络）
+			const localHist = getHistory()
+			const found = localHist.find((h) => h.vod_id === item.vod_id);
 			if (found) {
 				savedEpisode.value = found.episode || "";
 				savedProgress.value = found.progress || 0;
@@ -286,6 +272,10 @@
 					);
 					if (idx >= 0) currentIndex.value = idx;
 				}
+			}
+			// 自动播放第一集（或历史进度）
+			if (currentEpisodes.value.length > 0) {
+				playEpisode(currentIndex.value);
 			}
 		} catch (e) {
 			error.value = true;
@@ -338,6 +328,7 @@
 	}
 
 	function playEpisode(index) {
+		logSection('播放切换');
 		const ep = currentEpisodes.value[index];
 		if (!ep) return;
 		currentIndex.value = index;
@@ -482,8 +473,10 @@
 	}
 
 	function onVideoError() {
+		// video 组件在 src 为空时也会触发 @error，此时没有加载任何源，忽略
+		if (!hasSource.value) return
 		const ep = currentEpisodes.value[currentIndex.value];
-		if (ep && hasSource.value) {
+		if (ep) {
 			fallbackToNextLine(activeFlag.value, ep, "视频加载失败");
 		} else {
 			uni.showToast({
@@ -558,24 +551,38 @@
 	.page {
 		padding-bottom: 40rpx;
 		background: var(--bg-primary);
+		min-height: 100vh;
 	}
 
-	.status-page {
-		height: 100vh;
+	.loading-placeholder {
+		padding: 80rpx 0;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 20rpx;
-		background: var(--bg-primary);
+		gap: 16rpx;
 	}
 
-	.status-text {
-		font-size: 28rpx;
+	.loading-placeholder-text {
+		font-size: 26rpx;
 		color: var(--text-secondary);
 	}
 
-	.status-detail {
+	.player-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 10;
+	}
+
+	.overlay-text {
+		font-size: 28rpx;
+		color: #ccc;
+	}
+
+	.overlay-detail {
 		font-size: 24rpx;
 		color: #999;
 		text-align: center;
@@ -729,7 +736,6 @@
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
-		gap: 12rpx;
 	}
 
 	.vod-title {
@@ -812,12 +818,11 @@
 		&-header {
 			display: flex;
 			align-items: center;
-			justify-content: space-between;
-			margin-bottom: 14rpx;
+			margin-bottom: 16rpx;
+			gap: 12rpx;
 		}
 
 		&-title {
-			font-size: var(--text-lg);
 			font-weight: var(--weight-semibold);
 			color: var(--text-primary);
 		}
@@ -832,6 +837,9 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 10rpx;
+		padding-left: 20rpx;
+		max-height: 600rpx;
+		overflow-y: auto;
 	}
 
 	.ep {
@@ -868,6 +876,7 @@
 		line-height: var(--leading-loose);
 		letter-spacing: var(--tracking-narrow);
 		white-space: pre-wrap;
+		padding-left: 20rpx;
 	}
 
 	.expand-btn {

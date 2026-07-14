@@ -1,28 +1,35 @@
 <template>
 	<view class="page" :style="themeStyle">
+		<!-- 顶部 tab -->
+		<view class="tabs">
+			<text class="tab" :class="{ active: activeTab === 'vod' }" @tap="switchTab('vod')">点播</text>
+			<text class="tab" :class="{ active: activeTab === 'live' }" @tap="switchTab('live')">直播</text>
+		</view>
+
 		<!-- 空状态 -->
 		<view v-if="list.length === 0" class="empty">
 			<uni-icons type="link" size="60" color="#555" />
-			<text class="empty-text">暂无历史订阅</text>
+			<text class="empty-text">暂无{{ activeTab === 'vod' ? '点播' : '直播' }}订阅历史</text>
 			<text class="empty-sub">订阅成功后自动记录</text>
 		</view>
 
 		<!-- 列表 -->
 		<view v-else class="list">
-		 <view class="list-item" v-for="(item, index) in list" :key="item.url">
-		  <view class="item-main">
-		   <text class="item-index">{{ index + 1 }}</text>
-		   <view class="item-content">
-		    <text class="item-url" lines="2">{{ item.url }}</text>
-		    <text class="item-time">{{ formatTime(item.time) }}</text>
-		   </view>
-		   <text v-if="item.url === store.subUrl" class="item-badge">使用中</text>
-		  </view>
-		  <view class="item-actions">
-		   <text class="action-btn copy" @tap="copyUrl(item.url)">复制</text>
-		   <text v-if="item.url !== store.subUrl" class="action-btn delete" @tap="deleteUrl(item.url, index + 1)">删除</text>
-		  </view>
-		 </view>
+			<view class="list-item" v-for="(item, index) in list" :key="item.url">
+				<view class="item-main">
+					<text class="item-index">{{ index + 1 }}</text>
+					<view class="item-content">
+						<text class="item-url" lines="2">{{ item.url }}</text>
+						<text class="item-time">{{ formatTime(item.time) }}</text>
+					</view>
+					<text v-if="isCurrentUrl(item.url)" class="item-badge">使用中</text>
+				</view>
+				<view class="item-actions">
+					<text class="action-btn copy" @tap="copyUrl(item.url)">复制</text>
+					<text v-if="!isCurrentUrl(item.url)" class="action-btn delete"
+						@tap="deleteUrl(item.url, index + 1)">删除</text>
+				</view>
+			</view>
 		</view>
 
 		<!-- 底部清空按钮 -->
@@ -41,21 +48,35 @@
 		themeStyle
 	} from '@/utils/theme.js'
 	import {
-	 getSubHistory,
-	 removeSubHistory
+		getSubHistory,
+		removeSubHistory,
+		getLiveSubHistory,
+		removeLiveSubHistory
 	} from '@/utils/store.js'
 	import {
-	 store
+		store
 	} from '@/utils/appState.js'
 
+	const activeTab = ref('vod')
 	const list = ref([])
 
 	onMounted(() => {
 		loadList()
 	})
 
+	function switchTab(tab) {
+		activeTab.value = tab
+		loadList()
+	}
+
 	function loadList() {
-		list.value = getSubHistory()
+		const raw = activeTab.value === 'vod' ? (getSubHistory() || []) : (getLiveSubHistory() || [])
+		list.value = [...raw]
+	}
+
+	function isCurrentUrl(url) {
+		if (activeTab.value === 'vod') return url === store.subUrl
+		return url === store.liveSubUrl
 	}
 
 	function formatTime(ts) {
@@ -71,7 +92,8 @@
 			success: () => {
 				uni.showToast({
 					title: '已复制',
-					icon: 'success'
+					icon: 'success',
+					duration: 3000
 				})
 			}
 		})
@@ -80,10 +102,14 @@
 	function deleteUrl(url, idx) {
 		uni.showModal({
 			title: '提示',
-			content: `确定删除第${idx}个订阅吗？`,
+			content: `确定删除第${idx}个${activeTab.value === 'vod' ? '点播' : '直播'}订阅吗？`,
 			success: (res) => {
 				if (res.confirm) {
-					removeSubHistory(url)
+					if (activeTab.value === 'vod') {
+						removeSubHistory(url)
+					} else {
+						removeLiveSubHistory(url)
+					}
 					loadList()
 					uni.showToast({
 						title: '已删除',
@@ -95,22 +121,28 @@
 	}
 
 	function clearAll() {
-	 uni.showModal({
-	  title: '清空历史',
-	  content: '确定要清空所有订阅历史吗？（当前使用中的订阅不会被清除）',
-	  success: (res) => {
-	   if (res.confirm) {
-	    list.value.forEach(item => {
-	     if (item.url !== store.subUrl) removeSubHistory(item.url)
-	    })
-	    loadList()
-	    uni.showToast({
-	     title: '已清空',
-	     icon: 'success'
-	    })
-	   }
-	  }
-	 })
+		uni.showModal({
+			title: '清空历史',
+			content: `确定要清空所有${activeTab.value === 'vod' ? '点播' : '直播'}订阅历史吗？（当前使用中的订阅不会被清除）`,
+			success: (res) => {
+				if (res.confirm) {
+					list.value.forEach(item => {
+						if (!isCurrentUrl(item.url)) {
+							if (activeTab.value === 'vod') {
+								removeSubHistory(item.url)
+							} else {
+								removeLiveSubHistory(item.url)
+							}
+						}
+					})
+					loadList()
+					uni.showToast({
+						title: '已清空',
+						icon: 'success'
+					})
+				}
+			}
+		})
 	}
 </script>
 
@@ -119,7 +151,47 @@
 		min-height: 100vh;
 		background: var(--bg-primary);
 		padding-bottom: 100rpx;
-		padding-top: 10rpx;
+	}
+
+	/* 顶部 tab */
+	.tabs {
+		display: flex;
+		background: var(--card);
+		border-bottom: 1rpx solid var(--border);
+		position: sticky;
+		top: 0;
+		z-index: 10;
+	}
+
+	.tab {
+		flex: 1;
+		text-align: center;
+		padding: 24rpx 0;
+		font-size: 28rpx;
+		color: var(--text-secondary);
+		font-weight: 500;
+		position: relative;
+		transition: all 0.15s;
+
+		&.active {
+			color: $theme-accent;
+			font-weight: 600;
+
+			&::after {
+				content: '';
+				position: absolute;
+				bottom: 0;
+				left: 20%;
+				right: 20%;
+				height: 4rpx;
+				background: $theme-accent;
+				border-radius: 4rpx 4rpx 0 0;
+			}
+		}
+
+		&:active {
+			opacity: 0.6;
+		}
 	}
 
 	/* 空状态 */

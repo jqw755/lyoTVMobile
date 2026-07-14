@@ -238,7 +238,8 @@
 		if (!sites.length) {
 			uni.showToast({
 				title: '暂无可搜索站点',
-				icon: 'none'
+				icon: 'none',
+				duration: 3000
 			})
 			return
 		}

@@ -50,7 +50,6 @@
 		 font-size: var(--text-base);
 		 font-weight: var(--weight-medium);
 		 color: var(--text-secondary);
-		 transition: all 0.2s;
 		 flex-shrink: 0;
 
 		 &.active {

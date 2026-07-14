@@ -70,6 +70,7 @@ function _request(path, options = {}) {
 			url,
 			method,
 			data: body,
+			timeout: 10000,
 			header: Object.assign({}, _getAuthHeaders(), {
 				'Content-Type': 'application/json'
 			}, headers),
@@ -388,6 +389,44 @@ export const supabase = {
 						}
 					}
 				}
+			}
+		},
+
+		/**
+		 * 登录（使用邮箱+密码）
+		 */
+		async signInWithPassword({ email, password }) {
+			try {
+				const data = await _request('/auth/v1/token?grant_type=password', {
+					method: 'POST',
+					body: { email, password }
+				})
+				const session = {
+					access_token: data.access_token,
+					refresh_token: data.refresh_token,
+					expires_in: data.expires_in,
+					expires_at: Date.now() + (data.expires_in || 3600) * 1000
+				}
+				_saveSession(session)
+				_notifyAuthListeners('SIGNED_IN', session)
+				return { data: { user: data.user, session }, error: null }
+			} catch (err) {
+				return { data: { user: null, session: null }, error: err }
+			}
+		},
+
+		/**
+		 * 注册
+		 */
+		async signUp({ email, password }) {
+			try {
+				const data = await _request('/auth/v1/signup', {
+					method: 'POST',
+					body: { email, password }
+				})
+				return { data, error: null }
+			} catch (err) {
+				return { data: null, error: err }
 			}
 		},
 

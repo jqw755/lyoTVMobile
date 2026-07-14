@@ -17,6 +17,7 @@ const EMAIL_SUFFIX = '@lyo.tv'
 const STORAGE_KEYS = {
   HISTORY: 'lyotv_history',
   SUB_HISTORY: 'lyotv_sub_history',
+  LIVE_SUB_HISTORY: 'lyotv_live_sub_history',
   SUB_URL: 'lyotv_sub_url',
 }
 
@@ -213,10 +214,52 @@ export async function login(username, password) {
     email,
     password,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(translateAuthError(error.message))
   _currentUser = data.user
   await _loadProfile()
   return _currentUser
+}
+
+/**
+ * 将 Supabase 英文认证错误翻译为中文提示
+ */
+function translateAuthError(msg) {
+  // 后台邮箱禁用错误：Supabase GoTrue 返回 "Email address \"xxx@lyo.tv\" is invalid"
+  // 这种动态邮箱地址用正则匹配前缀，给用户更友好提示
+  if (/Email address .* is invalid/i.test(msg)) {
+    return '该邮箱地址被服务端禁用，请联系管理员检查 Supabase 后台 Email Auth 域名配置'
+  }
+  const map = {
+    'Invalid login credentials': '账号不存在或密码错误，请检查后重试',
+    'Email not confirmed': '邮箱尚未验证，请先验证邮箱',
+    'User already registered': '该账号已注册，请直接登录',
+    'Invalid email': '邮箱格式不正确',
+    'Password should be at least 6 characters': '密码长度不能少于 6 位',
+    'signUp': '注册失败，请稍后重试',
+    'Invalid email or password': '账号或密码错误',
+    'Email rate limit exceeded': '注册请求过于频繁，每小时仅限 2 次，请稍后再试',
+    'User already registered': '该账号已注册，请直接登录',
+    'For security purposes, you can not re-use an email address': '该邮箱已被注册，请直接登录',
+  }
+  return map[msg] || msg
+}
+
+/**
+ * 注册 - 注册后需管理员在 Supabase 后台确认邮箱方可登录
+ * @param {string} username
+ * @param {string} password
+ * @returns {Promise<boolean>} 注册请求是否提交成功
+ */
+export async function register(username, password) {
+  const email = username.trim() + EMAIL_SUFFIX
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  })
+  if (error) throw new Error(translateAuthError(error.message))
+  // 注册后自动清除当前 session，避免产生歧义
+  await supabase.auth.signOut()
+  return true
 }
 
 /**
@@ -467,6 +510,36 @@ export function removeSubHistory(url) {
   try {
     const list = getSubHistory().filter(item => item.url !== url)
     uni.setStorageSync(STORAGE_KEYS.SUB_HISTORY, list)
+  } catch {
+    // ignore
+  }
+}
+
+// ====== 直播订阅历史 ======
+
+export function getLiveSubHistory() {
+  try {
+    return uni.getStorageSync(STORAGE_KEYS.LIVE_SUB_HISTORY) || []
+  } catch {
+    return []
+  }
+}
+
+export function addLiveSubHistory(url) {
+  if (!url) return
+  try {
+    const list = getLiveSubHistory().filter(item => item.url !== url)
+    list.unshift({ url, time: Date.now() })
+    uni.setStorageSync(STORAGE_KEYS.LIVE_SUB_HISTORY, list)
+  } catch {
+    // ignore
+  }
+}
+
+export function removeLiveSubHistory(url) {
+  try {
+    const list = getLiveSubHistory().filter(item => item.url !== url)
+    uni.setStorageSync(STORAGE_KEYS.LIVE_SUB_HISTORY, list)
   } catch {
     // ignore
   }

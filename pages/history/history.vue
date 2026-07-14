@@ -161,12 +161,14 @@
 			list.value = await removeHistoryItem(item.vod_id, time)
 			uni.showToast({
 				title: '已删除',
-				icon: 'none'
+				icon: 'none',
+				duration: 3000
 			})
 		} catch {
 			uni.showToast({
 				title: '删除失败',
-				icon: 'none'
+				icon: 'none',
+				duration: 3000
 			})
 		}
 	}
@@ -183,12 +185,14 @@
 						isEditing.value = false
 						uni.showToast({
 							title: '已清空',
-							icon: 'success'
+							icon: 'success',
+							duration: 3000
 						})
 					} catch {
 						uni.showToast({
 							title: '清空失败',
-							icon: 'none'
+							icon: 'none',
+							duration: 3000
 						})
 					}
 				}
