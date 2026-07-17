@@ -1,886 +1,1101 @@
 <template>
-	<view class="page" :style="themeStyle">
-		<!-- 播放器 -->
-		<view class="player-area" @tap="onPlayerTap" @longpress="onLongPress" @touchend="onLongPressEnd"
-			@touchcancel="onLongPressEnd">
-			<video id="detail-player" :key="videoKey" :src="videoUrl" :autoplay="autoPlay" :muted="muted"
-				:controls="true" :page-gesture="true" :show-mute-btn="true" :enable-progress-gesture="true"
-				object-fit="contain" :poster="vod?.vod_poster || ''" :title="vod?.vod_name || ''"
-				:enable-play-gesture="true" :vslide-gesture="true" :vslide-gesture-in-fullscreen="true"
-				:http-cache="false" play-btn-position="center" :mobilenet-hint-type="1" :rate="playbackRate"
-				style="width: 100%; height: 100%" @error="onVideoError" @tap="onVideoTap"
-				@fullscreenchange="onFullscreenChange" />
+  <view class="page" :style="themeStyle">
+    <!-- 播放器 -->
+    <view
+      class="player-area"
+      @tap="onPlayerTap"
+      @longpress="onLongPress"
+      @touchend="onLongPressEnd"
+      @touchcancel="onLongPressEnd"
+    >
+      <video
+        id="detail-player"
+        :key="videoKey"
+        :src="videoUrl"
+        :autoplay="autoPlay"
+        :muted="muted"
+        :controls="true"
+        :page-gesture="true"
+        :show-mute-btn="true"
+        :enable-progress-gesture="true"
+        object-fit="contain"
+        :poster="vod?.vod_poster || ''"
+        :title="vod?.vod_name || ''"
+        :enable-play-gesture="true"
+        :vslide-gesture="true"
+        :vslide-gesture-in-fullscreen="true"
+        :http-cache="false"
+        play-btn-position="center"
+        :mobilenet-hint-type="1"
+        :rate="playbackRate"
+        style="width: 100%; height: 100%"
+        @error="onVideoError"
+        @tap="onVideoTap"
+        @fullscreenchange="onFullscreenChange"
+      />
 
-			<!-- 加载覆盖层（vod 数据到之前显示，不阻塞页面框架） -->
-			<view class="player-overlay" v-if="loading && !vod">
-			</view>
-			<!-- 错误覆盖层（vod 到之前） -->
-			<view class="player-overlay" v-else-if="error && !vod">
-				<uni-icons type="closeempty" size="48" color="#888" />
-				<text class="overlay-text">加载失败</text>
-				<text class="overlay-detail" v-if="errorMsg">{{ errorMsg }}</text>
-				<text class="retry-btn" @tap="loadDetail">点击重试</text>
-			</view>
+      <!-- 顶部自定义栏（轻触显示） -->
+      <cover-view class="top-bar" v-if="hasSource && showControls">
+        <cover-view class="top-bar-back" @tap="onBackTap">
+          <uni-icons type="left" size="20" color="#fff" />
+        </cover-view>
+      </cover-view>
 
-			<!-- 倍速控制（仅全屏展示） -->
-			<!-- 全圆倍速按钮 -->
-			<cover-view class="speed-btn" v-if="hasSource && isFullscreen && showSpeed && !showSidebar"
-			 @tap="onSpeedBtnTap">
-			 <cover-view class="speed-circle-txt">{{ getDisplayRate() }}</cover-view>
-			</cover-view>
-			<!-- 侧边栏遮罩 -->
-			<cover-view class="speed-mask" v-if="hasSource && isFullscreen && showSidebar" @tap="closeSidebar" />
-			<!-- 倍速侧边栏 -->
-			<cover-view class="speed-sidebar" v-if="hasSource && isFullscreen && showSidebar">
-				<cover-view class="sidebar-title">倍速</cover-view>
-				<cover-view class="sidebar-opt" v-for="s in speedOptions" :key="s"
-					:class="{ active: playbackRate === s }" @tap="selectSpeed(s)">
-					<cover-view>{{ s }}x</cover-view>
-				</cover-view>
-			</cover-view>
+      <!-- 加载覆盖层（vod 数据到之前显示，不阻塞页面框架） -->
+      <view class="player-overlay" v-if="loading && !vod"> </view>
+      <!-- 错误覆盖层（vod 到之前） -->
+      <view class="player-overlay" v-else-if="error && !vod">
+        <uni-icons type="closeempty" size="48" color="#888" />
+        <text class="overlay-text">加载失败</text>
+        <text class="overlay-detail" v-if="errorMsg">{{ errorMsg }}</text>
+        <text class="retry-btn" @tap="loadDetail">点击重试</text>
+      </view>
 
-			<!-- 长按倍速提示 -->
-			<cover-view class="speed-hint" v-if="showLongPressHint">
-				<cover-view class="speed-hint-text">{{ longPressHintSpeed }}倍加速中</cover-view>
-			</cover-view>
+      <!-- 右侧悬浮倍速按钮 -->
+      <cover-view
+        class="speed-btn"
+        v-if="hasSource && showControls && !showSidebar"
+        @tap="onSpeedBtnTap"
+      >
+        <cover-view class="speed-circle-txt">{{ getDisplayRate() }}</cover-view>
+      </cover-view>
+      <!-- 侧边栏遮罩 -->
+      <cover-view
+        class="speed-mask"
+        v-if="hasSource && showSidebar"
+        @tap="onCloseSidebar"
+      />
+      <!-- 倍速侧边栏 -->
+      <cover-view
+        class="speed-sidebar"
+        v-if="hasSource && showSidebar"
+      >
+        <cover-view class="sidebar-title">倍速</cover-view>
+        <cover-view
+          class="sidebar-opt"
+          v-for="s in speedOptions"
+          :key="s"
+          :class="{ active: playbackRate === s }"
+          @tap="onSelectSpeed(s)"
+        >
+          <cover-view class="sidebar-opt-txt">{{ s }}x</cover-view>
+        </cover-view>
+      </cover-view>
 
-			<!-- 视频加载错误 / 自动换源提示 -->
-			<view class="video-error-overlay" v-if="videoErrorMsg && !switchingSource">
-				<uni-icons type="info" size="20" color="#fe8027" />
-				<text class="video-error-text">{{ videoErrorMsg }}</text>
-			</view>
-			<view class="video-error-overlay" v-if="switchingSource">
-				<uni-icons type="spinner-cycle" size="20" color="#fe8027" />
-				<text class="video-error-text switching">{{ videoErrorMsg }}</text>
-			</view>
-		</view>
+      <!-- 长按倍速提示 -->
+      <cover-view class="speed-hint" v-if="showLongPressHint">
+        <cover-view class="speed-hint-text"
+          >{{ longPressHintSpeed }}倍加速中</cover-view
+        >
+      </cover-view>
 
-		<!-- 加载占位（vod 数据到之前，信息区域不白屏） -->
-		<view class="loading-placeholder" v-if="loading && !vod">
-			<uni-icons type="spinner-cycle" size="20" color="#888" />
-			<text class="loading-placeholder-text">正在加载影片信息...</text>
-		</view>
+      <!-- 视频加载错误 / 自动换源提示 -->
+      <view
+        class="video-error-overlay"
+        v-if="videoErrorMsg && !switchingSource"
+      >
+        <uni-icons type="info" size="20" color="#fe8027" />
+        <text class="video-error-text">{{ videoErrorMsg }}</text>
+      </view>
+      <view class="video-error-overlay" v-if="switchingSource">
+        <uni-icons type="spinner-cycle" size="20" color="#fe8027" />
+        <text class="video-error-text switching">{{ videoErrorMsg }}</text>
+      </view>
+    </view>
 
-		<!-- 内容区域（vod 数据到后显示，不阻塞页面框架） -->
-		<view class="content-wrap" v-if="vod">
-			<!-- 标题 -->
-			<view class="info-section">
-				<view class="title-row">
-					<text class="vod-title">{{ vod.vod_name }}</text>
-					<uni-icons :type="isFaved ? 'star-filled' : 'star'" :color="isFaved ? '#fe8027' : '#888'" size="24"
-						@tap="toggleFav" />
-				</view>
-				<view class="tags">
-					<text class="tag status"
-						v-if="vod.vod_remarks && vod.vod_remarks !== '0'">{{ vod.vod_remarks }}</text>
-					<text class="tag">{{ vod.vod_year }}</text><text class="tag">{{ vod.vod_area }}</text>
-					<text class="tag" v-if="vod.vod_director">导演：{{ vod.vod_director }}</text>
-				</view>
-				<view class="source-row" v-if="flags.length > 0">
-					<uni-icons type="flag" size="14" color="#888" /><text class="source-label">站源：</text>
-					<scroll-view class="source-tabs" scroll-x show-scrollbar="false">
-						<text v-for="f in flags" :key="f.flag" class="source-tab"
-							:class="{ active: f.flag === activeFlag }" @tap="switchFlag(f.flag)">{{ f.flag }}</text>
-					</scroll-view>
-				</view>
-			</view>
+    <!-- 加载占位（vod 数据到之前，信息区域不白屏） -->
+    <view class="loading-placeholder" v-if="loading && !vod">
+      <uni-icons type="spinner-cycle" size="20" color="#888" />
+      <text class="loading-placeholder-text">正在加载影片信息...</text>
+    </view>
 
-			<!-- 选集 -->
-			<view class="section" v-if="currentEpisodes.length > 0">
-				<view class="section-header">
-					<uni-icons type="list" size="16" color="#888" /><text class="section-title">选集</text>
-					<text class="ep-count">共 {{ currentEpisodes.length }} 集</text>
-				</view>
-				<view class="episodes">
-					<text v-for="(ep, i) in displayEpisodes" :key="i" class="ep"
-						:class="{ playing: i === currentIndex }" @tap="playEpisode(i)">{{ ep.name }}</text>
-					<text v-if="currentEpisodes.length > COLLAPSE_LIMIT && !showAll" class="ep ep-more"
-						@tap="showAll = true">展开 {{ currentEpisodes.length - COLLAPSE_LIMIT }} 集
-						<uni-icons type="arrowdown" size="12" color="#fe8027" /></text>
-				</view>
-			</view>
-			<view class="section" v-if="vod.vod_content">
-				<view class="section-header">
-					<uni-icons type="info" size="16" color="#888" />
-					<text class="section-title">简介</text>
-				</view>
-				<text class="content" @tap="expand = !expand">{{ displayContent }}<text class="expand-btn">
-						{{ expand ? "收起" : "展开" }}
-						<uni-icons :type="expand ? 'up' : 'down'" size="12" color="#fe8027" />
-					</text>
-				</text>
-			</view>
-			<view class="section" v-if="vod.vod_actor">
-				<view class="section-header"><uni-icons type="person" size="16" color="#888" /><text
-						class="section-title">演员</text></view>
-				<text class="content">{{ vod.vod_actor }}</text>
-			</view>
-		</view>
-	</view>
+    <!-- 内容区域（vod 数据到后显示，不阻塞页面框架） -->
+    <view class="content-wrap" v-if="vod">
+      <!-- 标题（右侧收藏icon） -->
+      <view class="info-section">
+        <view class="title-row">
+          <text class="vod-title">{{ vod.vod_name }}</text>
+          <view class="fav-btn" @tap="toggleFav">
+            <uni-icons
+              v-if="favLoading"
+              type="spinner-cycle"
+              color="#fe8027"
+              size="24"
+            />
+            <uni-icons
+              v-else
+              :type="isFaved ? 'star-filled' : 'star'"
+              :color="isFaved ? '#fe8027' : '#888'"
+              size="24"
+            />
+          </view>
+        </view>
+        <!-- 年份 TC国语（vod_remarks） -->
+        <view class="tags" v-if="vod.vod_remarks && vod.vod_remarks !== '0'">
+          <text class="tag">{{ vod.vod_year }}</text>
+          <text class="tag">{{ vod.vod_remarks }}</text>
+        </view>
+        <!-- 站源 -->
+        <view class="source-row" v-if="flags.length > 0">
+          <uni-icons type="flag" size="14" color="#888" /><text
+            class="source-label"
+            >站源</text
+          >
+          <scroll-view class="source-tabs" scroll-x show-scrollbar="false">
+            <text
+              v-for="f in flags"
+              :key="f.flag"
+              class="source-tab"
+              :class="{ active: f.flag === activeFlag }"
+              @tap="switchFlag(f.flag)"
+              >{{ f.flag }}</text
+            >
+          </scroll-view>
+        </view>
+        <!-- 导演 -->
+        <view class="section" v-if="vod.vod_director">
+          <view class="section-header"
+            ><uni-icons type="person" size="16" color="#888" /><text
+              class="section-title"
+              >导演</text
+            ></view
+          >
+          <text class="content">{{ parseNames(vod.vod_director) }}</text>
+        </view>
+        <!-- 演员 -->
+        <view class="section" v-if="vod.vod_actor">
+          <view class="section-header"
+            ><uni-icons type="person" size="16" color="#888" /><text
+              class="section-title"
+              >演员</text
+            ></view
+          >
+          <text class="content">{{ parseNames(vod.vod_actor) }}</text>
+        </view>
+      </view>
+
+      <!-- 选集 -->
+      <view class="section" v-if="currentEpisodes.length > 0">
+        <view class="section-header">
+          <uni-icons type="list" size="16" color="#888" /><text
+            class="section-title"
+            >选集</text
+          >
+          <text class="ep-count">共 {{ currentEpisodes.length }} 集</text>
+        </view>
+        <view class="episodes">
+          <text
+            v-for="(ep, i) in displayEpisodes"
+            :key="i"
+            class="ep"
+            :class="{ playing: i === currentIndex }"
+            @tap="playEpisode(i)"
+            >{{ ep.name }}</text
+          >
+          <text
+            v-if="currentEpisodes.length > COLLAPSE_LIMIT && !showAll"
+            class="ep ep-more"
+            @tap="showAll = true"
+            >展开 {{ currentEpisodes.length - COLLAPSE_LIMIT }} 集
+            <uni-icons type="arrowdown" size="12" color="#fe8027"
+          /></text>
+        </view>
+      </view>
+      <!-- 简介 -->
+      <view class="section" v-if="vod.vod_content">
+        <view class="section-header">
+          <uni-icons type="info" size="16" color="#888" />
+          <text class="section-title">简介</text>
+        </view>
+        <text class="content" @tap="expand = !expand"
+          >{{ displayContent
+          }}<text class="expand-btn" v-if="isContentLong">
+            {{ expand ? "收起" : "展开" }}
+            <uni-icons
+              :type="expand ? 'up' : 'down'"
+              size="12"
+              color="#fe8027"
+            />
+          </text>
+        </text>
+      </view>
+    </view>
+  </view>
 </template>
 
 <script setup>
-	import {
-		ref,
-		computed,
-		onMounted,
-		onBeforeUnmount
-	} from "vue";
-	import {
-		themeStyle
-	} from '@/utils/theme.js'
-	import {
-		onLoad
-	} from "@dcloudio/uni-app";
-	import {
-		detail,
-		player,
-		searchSite
-	} from "@/utils/api.js";
-	import {
-		addFavorite,
-		removeFavorite,
-		isFavorite,
-		addHistory,
-		getHistory,
-		getSetting,
-	} from "@/utils/store.js";
-	import {
-		addLog,
-		logSection
-	} from '@/utils/debugLog.js';
-	import {
-		store
-	} from "@/utils/appState.js";
-	import {
-		useVideoPlayer
-	} from '@/utils/useVideoPlayer.js';
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { themeStyle } from "@/utils/theme.js";
+import { usePageListeners } from "@/utils/usePageListeners.js";
+import { onLoad } from "@dcloudio/uni-app";
+import { detail, player, searchSite } from "@/utils/api.js";
+import {
+  addFavorite,
+  removeFavorite,
+  isFavorite,
+  addHistory,
+  getHistory,
+  getSetting,
+  getCurrentUser,
+} from "@/utils/store.js";
 
-	const COLLAPSE_LIMIT = 30;
+import { store } from "@/utils/appState.js";
+import { useVideoPlayer } from "@/utils/useVideoPlayer.js";
 
-	const vod = ref(null);
-	const flags = ref([]);
-	const activeFlag = ref("");
-	const currentIndex = ref(0);
-	const showAll = ref(false);
-	const expand = ref(false);
-	const isFaved = ref(false);
-	const loading = ref(false);
-	const error = ref(false);
-	const errorMsg = ref("");
-	const hasSource = ref(false);
-	const videoUrl = ref("");
-	const autoPlay = ref(false);
-	const savedEpisode = ref("");
-	const savedProgress = ref(0);
-	const videoErrorMsg = ref("");
-	const switchingSource = ref(false);
-	const failedSiteKeys = ref(new Set());
-	const showLongPressHint = ref(false);
-	const longPressHintSpeed = ref(2);
+const COLLAPSE_LIMIT = 30;
 
-	// ===== 播放器共享状态（useVideoPlayer） =====
-	const {
-		videoKey, muted, playbackRate, speedOptions,
-		showSpeed, showSidebar, isFullscreen,
-		createVideoContext,
-		setControlsTimer, clearControlsTimer,
-		selectSpeed, onSpeedBtnTap, closeSidebar,
-		showSpeedTemporarily, getDisplayRate,
-		onFullscreenChange, exitFullscreen,
-	} = useVideoPlayer('detail-player')
+const vod = ref(null);
+const flags = ref([]);
+const activeFlag = ref("");
+const currentIndex = ref(0);
+const showAll = ref(false);
+const expand = ref(false);
+const isFaved = ref(false);
+const favLoading = ref(false);
+const loading = ref(false);
+const error = ref(false);
+const errorMsg = ref("");
+const hasSource = ref(false);
+const videoUrl = ref("");
+const autoPlay = ref(false);
+const savedEpisode = ref("");
+const savedProgress = ref(0);
+const videoErrorMsg = ref("");
+const switchingSource = ref(false);
+const failedSiteKeys = ref(new Set());
+const showLongPressHint = ref(false);
+ const longPressHintSpeed = ref(2);
+ const showControls = ref(false);
 
-	const COLLAPSE_LENGTH = 120;
-	const displayContent = computed(() => {
-		const text = stripHtml(vod.value?.vod_content || "");
-		if (expand.value || text.length <= COLLAPSE_LENGTH) return text;
-		return text.slice(0, COLLAPSE_LENGTH) + "...";
-	});
+// ===== 播放器共享状态（useVideoPlayer） =====
+const {
+  videoKey,
+  muted,
+  playbackRate,
+  speedOptions,
+  showSpeed,
+  showSidebar,
+  isFullscreen,
+  createVideoContext,
+  setControlsTimer,
+  clearControlsTimer,
+  selectSpeed,
+  onSpeedBtnTap,
+  closeSidebar,
+  showSpeedTemporarily,
+  getDisplayRate,
+  onFullscreenChange,
+  exitFullscreen,
+} = useVideoPlayer("detail-player");
 
-	// 倍速/全屏/定时器由 useVideoPlayer composable 提供
-	let pageId = "";
-	let pageKey = "";
+const COLLAPSE_LENGTH = 120;
+const displayContent = computed(() => {
+  const text = stripHtml(vod.value?.vod_content || "");
+  if (expand.value || text.length <= COLLAPSE_LENGTH) return text;
+  return text.slice(0, COLLAPSE_LENGTH) + "...";
+});
+const isContentLong = computed(() => {
+  const text = stripHtml(vod.value?.vod_content || "");
+  return text.length > COLLAPSE_LENGTH;
+});
 
-	const currentEpisodes = computed(() => {
-		const f = flags.value.find((f) => f.flag === activeFlag.value);
-		return f?.episodes || [];
-	});
-	const displayEpisodes = computed(() => {
-		if (showAll.value || currentEpisodes.value.length <= COLLAPSE_LIMIT)
-			return currentEpisodes.value;
-		return currentEpisodes.value.slice(0, COLLAPSE_LIMIT);
-	});
+// 倍速/全屏/定时器由 useVideoPlayer composable 提供
+let pageId = "";
+let pageKey = "";
 
-	onLoad((o) => {
-		pageId = o?.id || "";
-		pageKey = o?.key || "";
-	});
-	onMounted(() => {
-		logSection('详情页加载');
-		loadDetail();
-		muted.value = getSetting("video_muted", true);
-		uni.$on("mutedChanged", (v) => {
-			muted.value = v;
-		});
-	});
-	onBeforeUnmount(() => {
-		uni.$off("mutedChanged");
-		clearControlsTimer();
-		// 离开详情页时停止视频播放，节省流量
-		try {
-			const ctx = createVideoContext()
-			if (ctx) ctx.stop()
-		} catch (e) {}
-	});
+const currentEpisodes = computed(() => {
+  const f = flags.value.find((f) => f.flag === activeFlag.value);
+  return f?.episodes || [];
+});
+const displayEpisodes = computed(() => {
+  if (showAll.value || currentEpisodes.value.length <= COLLAPSE_LIMIT)
+    return currentEpisodes.value;
+  return currentEpisodes.value.slice(0, COLLAPSE_LIMIT);
+});
 
-	async function loadDetail() {
-		if (!pageId) return;
-		loading.value = true;
-		error.value = false;
-		errorMsg.value = "";
-		try {
-			let data;
+onLoad((o) => {
+  pageId = o?.id || "";
+  pageKey = o?.key || "";
+});
+onMounted(() => {
+  ;
+  loadDetail();
+  muted.value = getSetting("video_muted", true);
+  // 公共监听器：mutedChanged 同步
+  usePageListeners({ mutedRef: muted });
+});
+onBeforeUnmount(() => {
+  clearControlsTimer();
+  // 先清 hasSource：避免 ctx.stop() 触发 <video> src='' 的 @error 误判为播放失败
+  hasSource.value = false;
+  autoPlay.value = false;
+  // 离开详情页时停止视频播放，节省流量
+  try {
+    const ctx = createVideoContext();
+    if (ctx) ctx.stop();
+  } catch (e) {}
+});
 
-			data = await detail(pageId, pageKey);
+async function loadDetail() {
+  if (!pageId) return;
+  loading.value = true;
+  error.value = false;
+  errorMsg.value = "";
+  try {
+    let data;
 
-			const item = data.list?.[0] || data.vod;
-			if (!item) {
-				error.value = true;
-				errorMsg.value = "未获取到影片信息";
-				return;
-			}
-			vod.value = item;
-			uni.setNavigationBarTitle({
-				title: item.vod_name
-			});
-			if (!vod.value.site_key && pageKey) vod.value.site_key = pageKey;
-			flags.value = item?.vodFlags || [];
-			if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
+    data = await detail(pageId, pageKey);
 
-			// 收藏状态（非阻塞，查不到或失败静默处理）
-			isFavorite(pageId).then(v => isFaved.value = v).catch(() => {})
+    const item = data.list?.[0] || data.vod;
+    if (!item) {
+      error.value = true;
+      errorMsg.value = "未获取到影片信息";
+      return;
+    }
+    vod.value = item;
+    uni.setNavigationBarTitle({
+      title: item.vod_name,
+    });
+    if (!vod.value.site_key && pageKey) vod.value.site_key = pageKey;
+    flags.value = item?.vodFlags || [];
+    if (flags.value.length > 0) activeFlag.value = flags.value[0].flag;
 
-			// 播放进度（从本地历史缓存恢复，同步无网络）
-			const localHist = getHistory()
-			const found = localHist.find((h) => h.vod_id === item.vod_id);
-			if (found) {
-				savedEpisode.value = found.episode || "";
-				savedProgress.value = found.progress || 0;
-				if (savedEpisode.value && currentEpisodes.value.length > 0) {
-					const idx = currentEpisodes.value.findIndex(
-						(ep) => ep.name === savedEpisode.value,
-					);
-					if (idx >= 0) currentIndex.value = idx;
-				}
-			}
-			// 自动播放第一集（或历史进度）
-			if (currentEpisodes.value.length > 0) {
-				playEpisode(currentIndex.value);
-			}
-		} catch (e) {
-			error.value = true;
-			errorMsg.value = e?.message || "请求异常";
-		} finally {
-			loading.value = false;
-		}
-	}
+    // 收藏状态（非阻塞，查不到或失败静默处理）
+    isFavorite(pageId)
+      .then((v) => (isFaved.value = v))
+      .catch(() => {});
 
-	function extractUrl(u) {
-		let r = "";
-		if (!u) return "";
-		if (typeof u === "string") r = u;
-		else if (u.values?.length > 0) {
-			const p = u.position || 0;
-			const i = Math.min(p, u.values.length - 1);
-			r = u.values[i]?.v || u.values[0]?.v || "";
-		}
-		if (r.includes("127.0.0.1:-1/")) {
-			const m = r.match(/[?&]url=([^&]+)/);
-			if (m) {
-				try {
-					r = decodeURIComponent(m[1]);
-				} catch {
-					r = m[1];
-				}
-			}
-		}
-		return r;
-	}
+    // 播放进度（从本地历史缓存恢复，同步无网络）
+    const localHist = getHistory();
+    const found = localHist.find((h) => h.vod_id === item.vod_id);
+    if (found) {
+      savedEpisode.value = found.episode || "";
+      savedProgress.value = found.progress || 0;
+      if (savedEpisode.value && currentEpisodes.value.length > 0) {
+        const idx = currentEpisodes.value.findIndex(
+          (ep) => ep.name === savedEpisode.value,
+        );
+        if (idx >= 0) currentIndex.value = idx;
+      }
+    }
+    // 自动播放第一集（或历史进度）
+    if (currentEpisodes.value.length > 0) {
+      playEpisode(currentIndex.value);
+    }
+  } catch (e) {
+    error.value = true;
+    errorMsg.value = e?.message || "请求异常";
+  } finally {
+    loading.value = false;
+  }
+}
 
-	function switchFlag(f) {
-		activeFlag.value = f;
-		currentIndex.value = 0;
-		showAll.value = false;
-		savedEpisode.value = "";
-		savedProgress.value = 0;
-		if (hasSource.value) {
-			hasSource.value = false;
-			autoPlay.value = false;
-			if (currentEpisodes.value.length > 0) setTimeout(() => playEpisode(0), 100);
-		}
-	}
+function extractUrl(u) {
+  let r = "";
+  if (!u) return "";
+  if (typeof u === "string") r = u;
+  else if (u.values?.length > 0) {
+    const p = u.position || 0;
+    const i = Math.min(p, u.values.length - 1);
+    r = u.values[i]?.v || u.values[0]?.v || "";
+  }
+  if (r.includes("127.0.0.1:-1/")) {
+    const m = r.match(/[?&]url=([^&]+)/);
+    if (m) {
+      try {
+        r = decodeURIComponent(m[1]);
+      } catch {
+        r = m[1];
+      }
+    }
+  }
+  return r;
+}
 
-	function onVideoTap() {
-		// 用户点击了 video（含 poster 上的播放按钮），触发加载真实地址
-		if (!hasSource.value && currentEpisodes.value.length > 0) {
-			playEpisode(currentIndex.value);
-		}
-	}
+function switchFlag(f) {
+  activeFlag.value = f;
+  currentIndex.value = 0;
+  showAll.value = false;
+  savedEpisode.value = "";
+  savedProgress.value = 0;
+  if (hasSource.value) {
+    hasSource.value = false;
+    autoPlay.value = false;
+    if (currentEpisodes.value.length > 0) setTimeout(() => playEpisode(0), 100);
+  }
+}
 
-	function playEpisode(index) {
-		logSection('播放切换');
-		const ep = currentEpisodes.value[index];
-		if (!ep) return;
-		currentIndex.value = index;
-		showAll.value = true;
-		addHistory(vod.value, ep.name, 0);
-		videoErrorMsg.value = "";
-		switchingSource.value = false;
-		loadVideoSource(activeFlag.value, ep);
-	}
+function onVideoTap() {
+  // 用户点击了 video（含 poster 上的播放按钮），触发加载真实地址
+  if (!hasSource.value && currentEpisodes.value.length > 0) {
+    playEpisode(currentIndex.value);
+  }
+}
 
-	function loadVideoSource(flag, ep, isFallback) {
-		player(flag, ep.url, pageKey)
-			.then((data) => {
-				const url = extractUrl(data.url) || ep.url || "";
-				if (!url) {
-					fallbackToNextLine(flag, ep, "未获取到播放地址");
-					return;
-				}
-				videoKey.value++;
-				videoUrl.value = url;
-				hasSource.value = true;
-				autoPlay.value = true;
-				switchingSource.value = false;
-				videoErrorMsg.value = "";
-				if (isFallback) {
-					uni.showToast({
-						title: `已切换至「${flag}」`,
-						icon: "none"
-					});
-				}
-				if (isFullscreen.value) showSpeedTemporarily();
-			})
-			.catch((e) => {
-				fallbackToNextLine(flag, ep, e?.message || "播放接口异常");
-			});
-	}
+function playEpisode(index) {
+  ;
+  const ep = currentEpisodes.value[index];
+  if (!ep) return;
+  currentIndex.value = index;
+  showAll.value = true;
+  addHistory(vod.value, ep.name, 0);
+  videoErrorMsg.value = "";
+  switchingSource.value = false;
+  loadVideoSource(activeFlag.value, ep);
+}
 
-	/**
-	 * fongmi 风格：两级降级策略
-	 * 1. fallbackToNextLine — 当前视频数据内切换下一个 flag
-	 * 2. searchFallback — 跨站搜索同名影片，自动选第一个
-	 */
-	function fallbackToNextLine(currentFlag, ep, reason) {
-		const allFlags = flags.value.map(f => f.flag);
-		const currentIdx = allFlags.indexOf(currentFlag);
-		for (let i = currentIdx + 1; i < allFlags.length; i++) {
-			const nextFlag = allFlags[i];
-			const nextEpisodes = flags.value.find(f => f.flag === nextFlag)?.episodes || [];
-			const nextEp = nextEpisodes.find(e => e.name === ep.name) || nextEpisodes[0];
-			if (nextEp) {
-				const idx = nextEpisodes.indexOf(nextEp);
-				activeFlag.value = nextFlag;
-				currentIndex.value = idx;
-				switchingSource.value = true;
-				videoErrorMsg.value = `正在切换至「${nextFlag}」...`;
-				hasSource.value = false;
-				autoPlay.value = false;
-				videoUrl.value = "";
-				setTimeout(() => loadVideoSource(nextFlag, nextEp, true), 300);
-				return;
-			}
-		}
-		// 一级降级失败 → 二级降级：跨站搜索
-		searchFallback(ep, reason);
-	}
+function loadVideoSource(flag, ep, isFallback) {
+  player(flag, ep.url, pageKey)
+    .then((data) => {
+      const url = extractUrl(data.url) || ep.url || "";
+      if (!url) {
+        fallbackToNextLine(flag, ep, "未获取到播放地址");
+        return;
+      }
+      videoKey.value++;
+      videoUrl.value = url;
+      hasSource.value = true;
+      autoPlay.value = true;
+      switchingSource.value = false;
+      videoErrorMsg.value = "";
+      if (isFallback) {
+        uni.showToast({
+          title: `已切换至「${flag}」`,
+          icon: "none",
+        });
+      }
+      if (isFullscreen.value) showSpeedTemporarily();
+    })
+    .catch((e) => {
+      fallbackToNextLine(flag, ep, e?.message || "播放接口异常");
+    });
+}
 
-	async function searchFallback(ep, reason) {
-		const keyword = vod.value?.vod_name || "";
-		if (!keyword) {
-			allFailed(reason);
-			return;
-		}
-		// 记录当前 site_key 为失败
-		if (vod.value?.site_key) {
-			failedSiteKeys.value.add(vod.value.site_key);
-		}
-		switchingSource.value = true;
-		videoErrorMsg.value = `正在搜索其他站源...`;
-		// 获取所有可搜索站点，过滤掉已失败的，最多取前3个
-		const MAX_FALLBACK = 3;
-		const sites = (store.sites || []).filter(s =>
-			!failedSiteKeys.value.has(s.key) && s.key !== pageKey
-		).slice(0, MAX_FALLBACK);
-		if (sites.length === 0) {
-			allFailed(reason);
-			return;
-		}
-		// 依次搜索各站点，取第一个有结果的
-		for (const site of sites) {
-			videoErrorMsg.value = `正在搜索「${site.name}」...`;
-			try {
-				const data = await searchSite(keyword, site.key);
-				const items = data?.list || [];
-				if (items.length === 0) continue;
-				// 找到名称匹配的影片
-				const match = items.find(item =>
-					item.vod_name === keyword || item.vod_name.includes(keyword)
-				) || items[0];
-				// 获取该影片的详情和播放地址
-				const detailData = await detail(match.vod_id, site.key);
-				const vodItem = detailData.list?.[0] || detailData.vod;
-				if (!vodItem) continue;
-				const vFlags = vodItem?.vodFlags || [];
-				if (vFlags.length === 0) continue;
-				// 用第一个 flag 播放当前集
-				const firstFlag = vFlags[0].flag;
-				const firstEpisodes = vFlags[0].episodes || [];
-				const targetEp = firstEpisodes.find(e => e.name === ep.name) || firstEpisodes[0] || ep;
-				activeFlag.value = firstFlag;
-				// 把新源的 flag 注入到页面
-				const existingFlag = flags.value.find(f => f.flag === firstFlag);
-				if (!existingFlag) {
-					flags.value.push(vFlags[0]);
-				}
-				currentIndex.value = firstEpisodes.indexOf(targetEp);
-				switchingSource.value = true;
-				videoErrorMsg.value = `正在尝试「${site.name}」...`;
-				hasSource.value = false;
-				autoPlay.value = false;
-				videoUrl.value = "";
-				setTimeout(() => {
-					loadVideoSource(firstFlag, targetEp, true);
-				}, 300);
-				return;
-			} catch {
-				failedSiteKeys.value.add(site.key);
-				continue;
-			}
-		}
-		allFailed(reason);
-	}
+/**
+ * fongmi 风格：两级降级策略
+ * 1. fallbackToNextLine — 当前视频数据内切换下一个 flag
+ * 2. searchFallback — 跨站搜索同名影片，自动选第一个
+ */
+function fallbackToNextLine(currentFlag, ep, reason) {
+  const allFlags = flags.value.map((f) => f.flag);
+  const currentIdx = allFlags.indexOf(currentFlag);
+  for (let i = currentIdx + 1; i < allFlags.length; i++) {
+    const nextFlag = allFlags[i];
+    const nextEpisodes =
+      flags.value.find((f) => f.flag === nextFlag)?.episodes || [];
+    const nextEp =
+      nextEpisodes.find((e) => e.name === ep.name) || nextEpisodes[0];
+    if (nextEp) {
+      const idx = nextEpisodes.indexOf(nextEp);
+      activeFlag.value = nextFlag;
+      currentIndex.value = idx;
+      switchingSource.value = true;
+      videoErrorMsg.value = `正在切换至「${nextFlag}」...`;
+      hasSource.value = false;
+      autoPlay.value = false;
+      videoUrl.value = "";
+      setTimeout(() => loadVideoSource(nextFlag, nextEp, true), 300);
+      return;
+    }
+  }
+  // 一级降级失败 → 二级降级：跨站搜索
+  searchFallback(ep, reason);
+}
 
-	function allFailed(reason) {
-		switchingSource.value = false;
-		videoErrorMsg.value = "所有站源均不可用";
-		hasSource.value = false;
-		uni.showToast({
-			title: `播放失败: ${reason}`,
-			icon: "none",
-			duration: 3000,
-		});
-	}
+async function searchFallback(ep, reason) {
+  const keyword = vod.value?.vod_name || "";
+  if (!keyword) {
+    allFailed(reason);
+    return;
+  }
+  // 记录当前 site_key 为失败
+  if (vod.value?.site_key) {
+    failedSiteKeys.value.add(vod.value.site_key);
+  }
+  switchingSource.value = true;
+  videoErrorMsg.value = `正在搜索其他站源...`;
+  // 获取所有可搜索站点，过滤掉已失败的，最多取前3个
+  const MAX_FALLBACK = 3;
+  const sites = (store.sites || [])
+    .filter((s) => !failedSiteKeys.value.has(s.key) && s.key !== pageKey)
+    .slice(0, MAX_FALLBACK);
+  if (sites.length === 0) {
+    allFailed(reason);
+    return;
+  }
+  // 依次搜索各站点，取第一个有结果的
+  for (const site of sites) {
+    videoErrorMsg.value = `正在搜索「${site.name}」...`;
+    try {
+      const data = await searchSite(keyword, site.key);
+      const items = data?.list || [];
+      if (items.length === 0) continue;
+      // 找到名称匹配的影片
+      const match =
+        items.find(
+          (item) =>
+            item.vod_name === keyword || item.vod_name.includes(keyword),
+        ) || items[0];
+      // 获取该影片的详情和播放地址
+      const detailData = await detail(match.vod_id, site.key);
+      const vodItem = detailData.list?.[0] || detailData.vod;
+      if (!vodItem) continue;
+      const vFlags = vodItem?.vodFlags || [];
+      if (vFlags.length === 0) continue;
+      // 用第一个 flag 播放当前集
+      const firstFlag = vFlags[0].flag;
+      const firstEpisodes = vFlags[0].episodes || [];
+      const targetEp =
+        firstEpisodes.find((e) => e.name === ep.name) || firstEpisodes[0] || ep;
+      activeFlag.value = firstFlag;
+      // 把新源的 flag 注入到页面
+      const existingFlag = flags.value.find((f) => f.flag === firstFlag);
+      if (!existingFlag) {
+        flags.value.push(vFlags[0]);
+      }
+      currentIndex.value = firstEpisodes.indexOf(targetEp);
+      switchingSource.value = true;
+      videoErrorMsg.value = `正在尝试「${site.name}」...`;
+      hasSource.value = false;
+      autoPlay.value = false;
+      videoUrl.value = "";
+      setTimeout(() => {
+        loadVideoSource(firstFlag, targetEp, true);
+      }, 300);
+      return;
+    } catch {
+      failedSiteKeys.value.add(site.key);
+      continue;
+    }
+  }
+  allFailed(reason);
+}
 
-	function onVideoError() {
-		// video 组件在 src 为空时也会触发 @error，此时没有加载任何源，忽略
-		if (!hasSource.value) return
-		const ep = currentEpisodes.value[currentIndex.value];
-		if (ep) {
-			fallbackToNextLine(activeFlag.value, ep, "视频加载失败");
-		} else {
-			uni.showToast({
-				title: "视频加载失败",
-				icon: "none"
-			});
-		}
-	}
+function allFailed(reason) {
+  switchingSource.value = false;
+  videoErrorMsg.value = "所有站源均不可用";
+  hasSource.value = false;
+  uni.showToast({
+    title: `播放失败: ${reason}`,
+    icon: "none",
+    duration: 3000,
+  });
+}
 
-	function setSpeed(s) {
-		playbackRate.value = s;
-		showSidebar.value = false;
-		if (isFullscreen.value) showSpeedTemporarily();
-	}
+function onVideoError() {
+  // video 组件在 src 为空时也会触发 @error，此时没有加载任何源，忽略
+  if (!hasSource.value) return;
+  const ep = currentEpisodes.value[currentIndex.value];
+  if (ep) {
+    fallbackToNextLine(activeFlag.value, ep, "视频加载失败");
+  } else {
+    uni.showToast({
+      title: "视频加载失败",
+      icon: "none",
+    });
+  }
+}
 
-	function onPlayerTap() {
-		if (showSidebar.value) {
-			closeSidebar();
-			return;
-		}
-		if (hasSource.value && isFullscreen.value) {
-			showSpeedTemporarily();
-		}
-	}
+function setSpeed(s) {
+  playbackRate.value = s;
+  showSidebar.value = false;
+  if (isFullscreen.value) showSpeedTemporarily();
+}
 
-	function onLongPress() {
-		if (!hasSource.value) return;
-		const speed = getSetting('long_press_speed', 2);
-		playbackRate.value = speed;
-		longPressHintSpeed.value = speed;
-		showLongPressHint.value = true;
-	}
+function onPlayerTap() {
+   if (showSidebar.value) {
+     closeSidebar();
+     return;
+   }
+   // 切换自定义控制栏显示状态
+   showControls.value = !showControls.value;
+   if (showControls.value) {
+     setControlsTimer(() => { showControls.value = false }, 4000);
+   } else {
+     clearControlsTimer();
+   }
+ }
 
-	function onLongPressEnd() {
-		showLongPressHint.value = false;
-	}
+ function onControlsTap() {
+   // cover-view 层点击：切换自定义控制栏
+   showControls.value = !showControls.value;
+   if (showControls.value) {
+     setControlsTimer(() => { showControls.value = false }, 4000);
+   } else {
+     clearControlsTimer();
+   }
+ }
 
-	async function toggleFav() {
-		if (isFaved.value) {
-			await removeFavorite(vod.value.vod_id);
-			isFaved.value = false;
-			uni.showToast({
-				title: "已取消收藏",
-				icon: "none"
-			});
-		} else {
-			await addFavorite(vod.value);
-			isFaved.value = true;
-			uni.showToast({
-				title: "已收藏",
-				icon: "success"
-			});
-		}
-	}
+ function onCloseSidebar() {
+   closeSidebar();
+   showControls.value = true;
+   setControlsTimer(() => { showControls.value = false }, 4000);
+ }
 
-	function stripHtml(html) {
-		if (!html) return ''
-		return html.replace(/<p>/gi, '\n').replace(/<\/p>/gi, '')
-			.replace(/<br\s*\/?>/gi, '\n')
-			.replace(/<[^>]+>/g, '')
-			.replace(/&nbsp;/g, ' ')
-			.replace(/&#(\d+);/g, (m, c) => String.fromCharCode(c))
-			.replace(/&amp;/g, '&')
-			.replace(/&lt;/g, '<')
-			.replace(/&gt;/g, '>')
-			.replace(/\n{3,}/g, '\n\n')
-			.trim()
-	}
+ function onSelectSpeed(s) {
+   selectSpeed(s);
+   showControls.value = true;
+   setControlsTimer(() => { showControls.value = false }, 4000);
+ }
+
+ function onBackTap() {
+   if (isFullscreen.value) {
+     exitFullscreen();
+   } else {
+     uni.navigateBack();
+   }
+ }
+
+function onLongPress() {
+  if (!hasSource.value) return;
+  const speed = getSetting("long_press_speed", 2);
+  playbackRate.value = speed;
+  longPressHintSpeed.value = speed;
+  showLongPressHint.value = true;
+}
+
+function onLongPressEnd() {
+  showLongPressHint.value = false;
+}
+
+async function toggleFav() {
+  // 未登录先拦截
+  if (!getCurrentUser()) {
+    uni.showModal({
+      title: "提示",
+      content: "登录后才能收藏，是否去登录？",
+      confirmText: "去登录",
+      cancelText: "暂不",
+      success: (res) => {
+        if (res.confirm) uni.navigateTo({ url: "/pages/login/login" });
+      },
+    });
+    return;
+  }
+  if (favLoading.value) return; // 防止重复点击
+  favLoading.value = true;
+  try {
+    if (isFaved.value) {
+      await removeFavorite(vod.value.vod_id);
+      isFaved.value = false;
+      uni.showToast({
+        title: "已取消收藏",
+        icon: "none",
+      });
+    } else {
+      await addFavorite(vod.value);
+      isFaved.value = true;
+      uni.showToast({
+        title: "已收藏",
+        icon: "success",
+      });
+    }
+  } finally {
+    favLoading.value = false;
+  }
+}
+
+/**
+ * 解析 fongmi 风格的导演/演员数据（[a=cr{...}/a.../a]），提取名称列表
+ */
+function parseNames(str) {
+  if (!str) return "";
+  // 不包含标记则原样返回（普通逗号分隔）
+  if (!str.includes("[a=cr")) return str;
+  // 提取所有 "name":"xxx" 字段
+  const names = [];
+  const regex = /"name"\s*:\s*"([^"]+)"/g;
+  let m;
+  while ((m = regex.exec(str)) !== null) {
+    names.push(m[1]);
+  }
+  return names.length > 0 ? names.join(" / ") : str;
+}
+
+function stripHtml(html) {
+  if (!html) return "";
+  return html
+    .replace(/<p>/gi, "\n")
+    .replace(/<\/p>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (m, c) => String.fromCharCode(c))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 </script>
 
 <style lang="scss" scoped>
-	.page {
-		padding-bottom: 40rpx;
-		background: var(--bg-primary);
-		min-height: 100vh;
-	}
+.page {
+  padding-bottom: 40rpx;
+  background: var(--bg-primary);
+  min-height: 100vh;
+}
 
-	.loading-placeholder {
-		padding: 80rpx 0;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 16rpx;
-	}
+.loading-placeholder {
+  padding: 80rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+}
 
-	.loading-placeholder-text {
-		font-size: 26rpx;
-		color: var(--text-secondary);
-	}
+.loading-placeholder-text {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
 
-	.player-overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 10;
-	}
+.player-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
 
-	.overlay-text {
-		font-size: 28rpx;
-		color: #ccc;
-	}
+.overlay-text {
+  font-size: 28rpx;
+  color: #ccc;
+}
 
-	.overlay-detail {
-		font-size: 24rpx;
-		color: #999;
-		text-align: center;
-		padding: 0 40rpx;
-		line-height: 1.5;
-	}
+.overlay-detail {
+  font-size: var(--text-sm);
+  color: #999;
+  text-align: center;
+  padding: 0 40rpx;
+  line-height: 1.5;
+}
 
-	.retry-btn {
-		font-size: 26rpx;
-		color: var(--accent);
-		padding: 12rpx 40rpx;
-		border: 1rpx solid var(--accent);
-		border-radius: 30rpx;
-		margin-top: 10rpx;
-	}
+.retry-btn {
+  font-size: 26rpx;
+  color: var(--accent);
+  padding: 12rpx 40rpx;
+  border: 1rpx solid var(--accent);
+  border-radius: 30rpx;
+  margin-top: 10rpx;
+}
 
-	.retry-btn:active {
-		opacity: 0.7;
-	}
+.retry-btn:active {
+  opacity: 0.7;
+}
 
-	.player-area {
-		position: relative;
-		width: 100%;
-		height: 460rpx;
-		background: #000;
-		overflow: hidden;
-	}
+.player-area {
+  position: relative;
+  width: 100%;
+  height: 460rpx;
+  background: #000;
+  overflow: hidden;
+}
 
-	/* 倍速控制（仅全屏展示） */
-	.speed-btn {
-		position: absolute;
-		right: 24rpx;
-		top: 24rpx;
-		z-index: 20;
-		width: 80rpx;
-		height: 80rpx;
-		border-radius: 50%;
-		background: rgba(0, 0, 0, 0.55);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
+/* 顶部自定义栏 */
+.top-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 36px;
+  z-index: 20;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+  display: flex;
+  align-items: center;
+  padding: 0 12rpx;
+}
 
-	/* 视频错误/换源提示 */
-	.video-error-overlay {
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 15;
-		padding: 8rpx 16rpx;
-		background: rgba(0, 0, 0, 0.6);
-		display: flex;
-		align-items: center;
-		gap: 8rpx;
-	}
+.top-bar-back {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-	.video-error-text {
-		font-size: 22rpx;
-		color: #fe8027;
-		flex: 1;
+/* 右侧悬浮倍速按钮 */
+.speed-btn {
+  position: absolute;
+  right: 24rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-		&.switching {
-			color: #fe8027;
-		}
-	}
+/* 视频错误/换源提示 */
+.video-error-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  padding: 8rpx 16rpx;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
 
-	.speed-circle-txt {
-		font-size: 30rpx;
-		font-weight: 700;
-		color: #fff;
-		text-align: center;
-		line-height: 1;
-	}
+.video-error-text {
+  font-size: 22rpx;
+  color: #fe8027;
+  flex: 1;
 
-	/* 长按倍速提示 */
-	.speed-hint {
-		position: absolute;
-		left: 50%;
-		top: 24rpx;
-		transform: translateX(-50%);
-		z-index: 25;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		pointer-events: none;
-	}
+  &.switching {
+    color: #fe8027;
+  }
+}
 
-	.speed-hint-text {
-		font-size: 28rpx;
-		font-weight: 600;
-		color: #fff;
-		text-align: center;
-		line-height: 1;
-	}
+.speed-circle-txt {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  line-height: 1;
+}
 
-	.speed-mask {
-		position: absolute;
-		left: 0;
-		top: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 25;
-		background: rgba(0, 0, 0, 0.3);
-	}
+/* 长按倍速提示 */
+.speed-hint {
+  position: absolute;
+  left: 50%;
+  top: 24rpx;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
 
-	.speed-sidebar {
-		position: absolute;
-		right: 0;
-		top: 0;
-		bottom: 0;
-		width: 200rpx;
-		z-index: 30;
-		background: rgba(0, 0, 0, 0.85);
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 30rpx 0;
-		gap: 20rpx;
-	}
+.speed-hint-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  line-height: 1;
+}
 
-	.sidebar-title {
-		font-size: 26rpx;
-		color: rgba(255, 255, 255, 0.5);
-		margin-bottom: 10rpx;
-	}
+.speed-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  background: rgba(0, 0, 0, 0.3);
+}
 
-	.sidebar-opt {
-		padding: 12rpx 30rpx;
-		border-radius: 30rpx;
-		font-size: 26rpx;
-		color: rgba(255, 255, 255, 0.8);
-		text-align: center;
-		min-width: 120rpx;
+.speed-sidebar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 200rpx;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30rpx 0;
+  gap: 20rpx;
+}
 
-		&.active {
-			background: $theme-accent;
-			color: #fff;
-			font-weight: 700;
-		}
-	}
+.sidebar-title {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 10rpx;
+}
 
-	.info-section {
-		padding: 24rpx 20rpx 16rpx;
-		background: var(--card);
-		margin: 16rpx 12rpx;
-		border-radius: 16rpx;
-	}
+.sidebar-opt {
+  padding: 12rpx 30rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  color: #ffffff;
+  text-align: center;
+  min-width: 120rpx;
 
-	.title-row {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-	}
+  &.active {
+    background: $theme-accent;
+    color: #ffffff;
+    font-weight: 700;
+  }
+}
 
-	.vod-title {
-		font-size: var(--text-xl);
-		font-weight: var(--weight-bold);
-		color: var(--text-primary);
-		flex: 1;
-		line-height: var(--leading-tight);
-		letter-spacing: var(--tracking-wide);
-	}
+.sidebar-opt-txt {
+  color: #ffffff;
+  font-size: 26rpx;
+}
 
-	.tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8rpx;
-		margin-top: 16rpx;
-	}
+.info-section {
+  padding: 26rpx 20rpx 16rpx;
+  background: var(--card);
+  margin: 16rpx 12rpx;
+  border-radius: 16rpx;
+}
 
-	.tag {
-		font-size: var(--text-sm);
-		color: var(--text-secondary);
-		background: var(--card-hover);
-		padding: 4rpx 14rpx;
-		border-radius: 6rpx;
-		letter-spacing: var(--tracking-normal);
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
 
-		&.status {
-			color: var(--accent);
-			background: rgba(254, 128, 39, 0.12);
-			font-weight: var(--weight-medium);
-		}
-	}
+.vod-title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  flex: 1;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-wide);
+}
 
-	.source-row {
-		display: flex;
-		align-items: center;
-		gap: 12rpx;
-		margin-top: 20rpx;
-		padding: 16rpx 0 0;
-		border-top: 1rpx solid var(--border);
-	}
+.fav-btn {
+  padding: 8rpx;
+  margin: -8rpx;
+}
 
-	.source-label {
-		font-size: 24rpx;
-		color: var(--text-secondary);
-		flex-shrink: 0;
-	}
+.tags {
+  display: flex;
+  gap: 8rpx;
+  margin-top: 16rpx;
+}
 
-	.source-tabs {
-		display: flex;
-		flex-direction: row;
-		white-space: nowrap;
-		overflow: hidden;
-	}
+.tag {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: var(--card-hover);
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+  letter-spacing: var(--tracking-normal);
 
-	.source-tab {
-		display: inline-flex;
-		padding: 8rpx 20rpx;
-		margin-right: 10rpx;
-		border-radius: 30rpx;
-		background: var(--card-hover);
-		font-size: 22rpx;
-		color: var(--text-secondary);
+  &.status {
+    color: var(--accent);
+    background: rgba(254, 128, 39, 0.12);
+    font-weight: var(--weight-medium);
+  }
+}
 
-		&.active {
-			background: var(--accent);
-			color: #fff;
-		}
-	}
+.source-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-top: 20rpx;
+  padding: 16rpx 0 0;
+  border-top: 1rpx solid var(--border);
+}
 
-	.actor-section {
-		padding: 0 20rpx;
-		margin-top: 24rpx;
-	}
+.source-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
 
-	.section {
-		padding: 0 20rpx;
-		margin-top: 24rpx;
+.source-tabs {
+  display: flex;
+  flex-direction: row;
+  white-space: nowrap;
+  overflow: hidden;
+}
 
-		&-header {
-			display: flex;
-			align-items: center;
-			margin-bottom: 16rpx;
-			gap: 12rpx;
-		}
+.source-tab {
+  display: inline-flex;
+  padding: 8rpx 20rpx;
+  margin-right: 10rpx;
+  border-radius: 30rpx;
+  background: var(--card-hover);
+  font-size: 22rpx;
+  color: var(--text-secondary);
 
-		&-title {
-			font-weight: var(--weight-semibold);
-			color: var(--text-primary);
-		}
-	}
+  &.active {
+    background: var(--accent);
+    color: #fff;
+  }
+}
 
-	.ep-count {
-		font-size: 24rpx;
-		color: var(--text-secondary);
-	}
+.actor-section {
+  padding: 0 20rpx;
+  margin-top: 24rpx;
+}
 
-	.episodes {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 10rpx;
-		padding-left: 20rpx;
-		max-height: 600rpx;
-		overflow-y: auto;
-	}
+.section {
+  padding: 0 20rpx;
+  margin-top: 24rpx;
 
-	.ep {
-		padding: 12rpx 24rpx;
-		border-radius: 8rpx;
-		background: var(--card-hover);
-		font-size: var(--text-sm);
-		color: var(--text-primary);
-		min-width: 96rpx;
-		text-align: center;
-		letter-spacing: var(--tracking-normal);
-		transition: all 0.15s;
+  &-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16rpx;
+    gap: 12rpx;
+  }
 
-		&.playing {
-			background: var(--accent);
-			color: #fff;
-			font-weight: 500;
-		}
+  &-title {
+	font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+  }
+}
 
-		&:active {
-			opacity: 0.7;
-		}
+.ep-count {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
 
-		&.ep-more {
-			color: var(--accent);
-			background: rgba(254, 128, 39, 0.1);
-			min-width: auto;
-		}
-	}
+.episodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  padding-left: 20rpx;
+  max-height: 600rpx;
+  overflow-y: auto;
+}
 
-	.content {
-		font-size: var(--text-base);
-		color: var(--text-secondary);
-		line-height: var(--leading-loose);
-		letter-spacing: var(--tracking-narrow);
-		white-space: pre-wrap;
-		padding-left: 20rpx;
-	}
+.ep {
+  padding: 12rpx 24rpx;
+  border-radius: 8rpx;
+  background: var(--card-hover);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  min-width: 96rpx;
+  text-align: center;
+  letter-spacing: var(--tracking-normal);
+  transition: all 0.15s;
 
-	.expand-btn {
-		color: var(--accent);
-		font-size: 24rpx;
-	}
+  &.playing {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 500;
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+
+  &.ep-more {
+    color: var(--accent);
+    background: rgba(254, 128, 39, 0.1);
+    min-width: auto;
+  }
+}
+
+.content {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: var(--leading-loose);
+  letter-spacing: var(--tracking-narrow);
+  white-space: pre-wrap;
+  padding-left: 20rpx;
+}
+
+.expand-btn {
+  color: var(--accent);
+  font-size: var(--text-sm);
+}
 </style>

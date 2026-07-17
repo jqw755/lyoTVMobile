@@ -36,23 +36,41 @@
 			<text class="empty-text">加载中...</text>
 		</view>
 
-		<!-- 主列表 -->
-		<scroll-view v-else class="scroll-body" scroll-y @scrolltolower="onLoadMore" lower-threshold="100">
-		 <!-- 按时间线分组渲染 -->
-		 <view v-for="(section, si) in visibleSections" :key="si" class="section">
-		  <view class="section-header">
-		   <text class="section-title">{{ section.key }}</text>
-		  </view>
-		  <vod-grid :items="section.items" @itemTap="goDetail">
-		   <template #overlay="{ item }">
-		    <view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
-		     <uni-icons type="closeempty" size="16" color="#fff" />
-		    </view>
-		   </template>
-		  </vod-grid>
-		 </view>
-			<uni-load-more :status="loadMoreStatus" />
-		</scroll-view>
+			<!-- 主列表 -->
+			<scroll-view v-else class="scroll-body" scroll-y @scrolltolower="onLoadMore" lower-threshold="100">
+			 <!-- 按时间线分组渲染 -->
+			 <view v-for="(section, si) in visibleSections" :key="si" class="section">
+			  <view class="section-header">
+			   <text class="section-title">{{ section.key }}</text>
+			  </view>
+			  <vod-grid :items="section.items" @itemTap="goDetail">
+			   <template #overlay="{ item }">
+			    <view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
+			     <uni-icons type="closeempty" size="16" color="#fff" />
+			    </view>
+			   </template>
+			  </vod-grid>
+			 </view>
+				<uni-load-more :status="loadMoreStatus" />
+			</scroll-view>
+
+		<!-- ===== 调试面板（定位"云端有数据本地拉不下来"）===== -->
+		<view class="debug-panel">
+			<view class="debug-header">
+				<text class="debug-title">收藏调试日志</text>
+				<view class="debug-actions">
+					<text class="debug-action" @tap="copyDebugLogs">复制</text>
+					<text class="debug-action" @tap="clearDebugLogs">清空</text>
+				</view>
+			</view>
+			<scroll-view scroll-y class="debug-scroll">
+				<text v-for="(line, i) in debugLogs" :key="i" class="debug-line">{{ line.text }}</text>
+				<text v-if="debugLogs.length === 0" class="debug-line">（无日志，等 onShow 触发）</text>
+			</scroll-view>
+			<view class="debug-state">
+				<text>loggedIn: {{ loggedIn }} | list.length: {{ list.length }} | loading: {{ loading }} | hasMore: {{ hasMore }}</text>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -76,8 +94,14 @@
 		clearFavorites,
 	} from '@/utils/store.js'
 	import {
-		useStatusBar
-	} from '@/utils/useStatusBar.js'
+	   useStatusBar
+	  } from '@/utils/useStatusBar.js'
+	  import {
+	   debugLog,
+	   debugLogs,
+	   clearDebugLogs,
+	   copyDebugLogs
+	  } from '@/utils/debugLogger.js'
 
 	const {
 		statusBarHeight
@@ -91,6 +115,9 @@
 	const page = ref(1)
 	const hasMore = ref(true)
 	const isEditing = ref(false)
+
+	  // ===== 调试使用全局 debugLog（见 App.vue 浮动按钮） =====
+	  // 直接用 debugLog('FAV', ...) 代替 debugLog('FAV',)
 
 	function groupByTime(items, timeField = 'fav_time') {
 		const now = new Date()
@@ -141,8 +168,13 @@
 	}
 
 	const visibleSections = computed(() => {
-		return groupByTime(list.value, 'fav_time')
-	})
+	   const result = groupByTime(list.value, 'fav_time')
+	   debugLog('FAV', 'visibleSections 计算:', JSON.stringify(result.map(s => ({ key: s.key, count: s.items.length }))))
+	   if (list.value.length > 0) {
+	    debugLog('FAV', 'list[0].fav_time=', list.value[0].fav_time, 'typeof=', typeof list.value[0].fav_time)
+	   }
+	   return result
+	  })
 
 	const loadMoreStatus = computed(() => {
 		if (loading.value) return 'loading'
@@ -151,22 +183,33 @@
 	})
 
 	async function load() {
+		debugLog('FAV','load() 开始, getCurrentUser=', getCurrentUser())
 		loggedIn.value = !!getCurrentUser()
+		debugLog('FAV','loggedIn=', loggedIn.value)
 		if (!loggedIn.value) {
 			list.value = []
+			debugLog('FAV','未登录，list 置空返回')
 			return
 		}
 		loading.value = true
 		page.value = 1
 		hasMore.value = true
 		try {
+			debugLog('FAV','调用 getFavoritesPaginated(1, ' + PAGE_SIZE + ')...')
 			const result = await getFavoritesPaginated(1, PAGE_SIZE)
-			list.value = result.items
+			debugLog('FAV','getFavoritesPaginated 返回', result)
+			list.value = result.items || []
 			hasMore.value = result.hasMore
-		} catch {
+			debugLog('FAV','list.length=', list.value.length, 'hasMore=', hasMore.value)
+			if (list.value.length > 0) {
+				debugLog('FAV','第一条 item=', list.value[0])
+			}
+		} catch (e) {
+			debugLog('FAV','load() catch 错误', e?.message || String(e))
 			list.value = []
 		} finally {
 			loading.value = false
+			debugLog('FAV','load() finally, loading=false')
 		}
 	}
 
@@ -259,6 +302,7 @@
 	}
 
 	onShow(() => {
+		debugLog('FAV','=== onShow 触发 ===')
 		load()
 	})
 
@@ -435,5 +479,67 @@
 		-webkit-line-clamp: 1;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+	}
+
+	/* ===== 调试面板 ===== */
+	.debug-panel {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 999;
+		background: rgba(0,0,0,0.92);
+		border-top: 2rpx solid #fe8027;
+		max-height: 360rpx;
+		display: flex;
+		flex-direction: column;
+	}
+	.debug-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 8rpx 16rpx;
+		background: rgba(254,128,39,0.15);
+	}
+	.debug-title {
+		font-size: 22rpx;
+		color: #fe8027;
+		font-weight: 600;
+	}
+	.debug-actions {
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+	}
+	.debug-action {
+		font-size: 20rpx;
+		color: #ccc;
+		padding: 4rpx 12rpx;
+		border-radius: 6rpx;
+		background: rgba(255,255,255,0.08);
+	}
+	.debug-action:active {
+		opacity: 0.6;
+	}
+	.debug-scroll {
+		flex: 1;
+		overflow-y: auto;
+		padding: 6rpx 12rpx;
+		max-height: 260rpx;
+	}
+	.debug-line {
+		display: block;
+		font-size: 18rpx;
+		color: #ccc;
+		line-height: 1.5;
+		font-family: monospace;
+		word-break: break-all;
+	}
+	.debug-state {
+		padding: 6rpx 12rpx;
+		background: rgba(255,255,255,0.05);
+		font-size: 18rpx;
+		color: #aaa;
+		font-family: monospace;
 	}
 </style>

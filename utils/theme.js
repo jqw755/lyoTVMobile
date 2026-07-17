@@ -12,6 +12,7 @@
  */
 import { ref, computed } from 'vue'
 import { getSetting, setSetting } from './store.js'
+import { debugLog } from './debugLogger.js'
 
 const THEME_KEY = 'theme'
 
@@ -60,7 +61,7 @@ const LIGHT = {
   '--border': '#eeeeee',
   '--accent': '#fe8027',
   '--gradient-from': '#fef0e8',
-  '--gradient-to': '#f5f5f5',
+  '--gradient-to': '#ffffff',
   // 字号
   '--text-xs': '20rpx',
   '--text-sm': '24rpx',
@@ -85,6 +86,31 @@ const LIGHT = {
 /** 响应式主题样式对象，绑定到页面根元素 :style="themeStyle" */
 export const themeStyle = computed(() => theme.value === 'light' ? LIGHT : DARK)
 
+/** 同步 tabbar 配色（需要从当前可见的 tabbar 页面调用才生效） */
+export function applyTabBarStyle(val) {
+  try {
+    debugLog('THEME', 'applyTabBarStyle called with:', val)
+    if (val === 'light') {
+      uni.setTabBarStyle({
+        color: '#888888',
+        selectedColor: '#fe8027',
+        backgroundColor: '#ffffff',
+        borderStyle: 'white',
+      })
+    } else {
+      uni.setTabBarStyle({
+        color: '#888888',
+        selectedColor: '#fe8027',
+        backgroundColor: '#1a1a1a',
+        borderStyle: 'black',
+      })
+    }
+    debugLog('THEME', 'applyTabBarStyle done')
+  } catch (e) {
+    debugLog('THEME', 'applyTabBarStyle error:', e)
+  }
+}
+
 /**
  * 从 storage 读取主题并更新当前 webview 的 theme ref
  * 用于跨 webview 同步：其它页面改了主题，本页面切回前台时从 storage 拉最新值
@@ -94,16 +120,24 @@ export function syncThemeFromStorage() {
   if (saved !== theme.value) theme.value = saved
 }
 
-/** 切换主题：更新 ref -> 持久化到 storage -> 广播通知所有 webview */
+/** 切换主题：更新 ref -> 持久化到 storage -> 广播通知所有 webview -> 同步 tabbar 配色 */
 export function setTheme(val) {
   theme.value = val
   uni.setStorageSync(THEME_KEY, val)
   try { setSetting('theme', val) } catch (e) {}
+  applyTabBarStyle(val)
   uni.$emit('themeChange', val)
 }
 
-/** 初始化：从本地偏好读取主题（兼容云端同步的 getSetting） */
+/** 初始化：从本地偏好读取主题（兼容云端同步的 getSetting）
+ * 云端同步场景：preferencesLoaded 后 initTheme 会把云端 theme 写入 ref + storage，
+ * 并广播 themeChange 让当前可见的 tabbar 页面重新调用 setTabBarStyle
+ */
 export function initTheme() {
-  theme.value = getSetting('theme', 'dark')
-  uni.setStorageSync(THEME_KEY, theme.value)
+  const saved = getSetting('theme', 'dark') || 'dark'
+  debugLog('THEME', 'initTheme() called, getSetting theme=', saved)
+  theme.value = saved
+  uni.setStorageSync(THEME_KEY, saved)
+  applyTabBarStyle(saved)
+  uni.$emit('themeChange', saved)
 }

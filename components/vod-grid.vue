@@ -1,8 +1,8 @@
 <template>
 	<view class="grid-wrapper">
-		<view class="grid" :style="{ gap: gap + 'rpx' }">
+		<view class="grid" :style="{ gridTemplateColumns: gridTemplateCols, gap: gap + 'rpx' }">
 			<view v-for="(item, idx) in items" :key="(item.vod_id && item.vod_id !== '0') ? item.vod_id : (item._key || ('idx-' + idx))" class="grid-item"
-				:style="{ width: itemWidth + 'rpx' }" @tap="onItemTap(item)">
+				@tap="onItemTap(item)">
 				<view class="grid-card">
 					<view class="grid-poster-wrap">
 						<image class="grid-poster" :src="item.vod_pic" mode="aspectFill" lazy-load />
@@ -29,13 +29,7 @@
 		return cleaned
 	}
 
-	// 从「我的」页面设置的尺寸级别 → 卡片基础宽度(rpx)
-	// 3=大图(宽卡片), 4=中图(适中), 5=小图(窄卡片)
-	const SIZE_WIDTH_MAP = {
-		3: 200,
-		4: 150,
-		5: 120,
-	}
+	// 网格列数 3/4/5，用于 CSS Grid repeat(N, 1fr)
 	import {
 		getSetting
 	} from '@/utils/store.js'
@@ -55,14 +49,19 @@
 		emits: ['itemTap'],
 		data() {
 			return {
-				gap: 24, // rpx
-				itemWidth: SIZE_WIDTH_MAP[3],
+				gap: 20, // rpx
+				cols: 3,
+			}
+		},
+		computed: {
+			gridTemplateCols() {
+				return `repeat(${this.cols}, 1fr)`
 			}
 		},
 		mounted() {
 			this.loadSize()
 			uni.$on('gridColsChanged', (val) => {
-				if (val != null) this.itemWidth = SIZE_WIDTH_MAP[val] || SIZE_WIDTH_MAP[3]
+				if (val != null) this.cols = val
 			})
 		},
 		beforeDestroy() {
@@ -70,8 +69,7 @@
 		},
 		methods: {
 			loadSize() {
-				const level = this.gridSize ?? getSetting('grid_cols', 3)
-				this.itemWidth = SIZE_WIDTH_MAP[level] || SIZE_WIDTH_MAP[3]
+				this.cols = this.gridSize ?? getSetting('grid_cols', 3)
 			},
 			onItemTap(item) {
 				this.$emit('itemTap', item)
@@ -88,9 +86,7 @@
 	}
 
 	.grid {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-start;
+		display: grid;
 	}
 
 	.grid-item {
@@ -135,9 +131,9 @@
 	}
 
 	.grid-info {
-		padding: 16rpx 14rpx 16rpx;
-		background-color: #212121;
-	}
+	   padding: 16rpx 14rpx 16rpx;
+	   background-color: var(--card);
+	  }
 
 	.grid-title {
 		font-size: var(--text-sm);

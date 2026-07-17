@@ -149,7 +149,7 @@
 
 			<!-- 关于 -->
 			<view class="about">
-				<text class="version">乐意欧TV v1.0.38</text>
+				<text class="version">乐意欧TV v1.0.52</text>
 			</view>
 		</view>
 
@@ -190,6 +190,7 @@
 						<uni-icons type="spinner-cycle" size="16" color="#fff" />
 						<text>保存中...</text>
 					</text>
+					<text class="editor-logout" @tap="doLogout">退出登录</text>
 				</view>
 			</view>
 		</view>
@@ -217,10 +218,7 @@
 		ensureInit,
 		home as apiHome
 	} from '@/utils/api.js'
-	import {
-		addLog,
-		logSection
-	} from '@/utils/debugLog.js'
+
 	import {
 		getSetting,
 		setSetting,
@@ -330,6 +328,8 @@
 	}
 
 	async function doLogout() {
+		// 退出时关闭编辑弹窗
+		showProfileEditor.value = false
 		uni.showLoading({
 			title: '退出中...',
 			mask: true
@@ -409,13 +409,11 @@
 				nickname,
 				introduction
 			})
-			// 更新本地 profile
-			if (profile.value) {
-				profile.value = {
-					...profile.value,
-					nickname,
-					introduction
-				}
+			// 更新本地 profile 并重新同步登录态，确保模板立即回显
+			profile.value = {
+				...(getProfile() || {}),
+				nickname,
+				introduction
 			}
 			showProfileEditor.value = false
 			uni.showToast({
@@ -437,7 +435,6 @@
 	onMounted(() => {
 		// 图片列数（从云端偏好读取）
 		currentCols.value = getSetting('grid_cols', 3)
-		// 主题：theme ref 已由 App.vue initTheme() 初始化，这里无需重复赋值
 		// 静音播放
 		muted.value = getSetting('video_muted', true)
 		// 长按倍速
@@ -446,8 +443,16 @@
 		calcCacheSize()
 		// 加载用户状态（初始加载一次，后续登录/退出由事件驱动）
 		loadUserState()
-		// 监听登录/退出事件更新 UI（无需每次切 tab 都刷新）
-		uni.$on('preferencesLoaded', () => loadUserState())
+		// 监听登录/退出事件更新 UI + 同步云端偏好到本地
+		uni.$on('preferencesLoaded', () => {
+			loadUserState()
+			// 从云端同步的偏好中读取所有设置并回显
+			currentCols.value = getSetting('grid_cols', 3)
+			muted.value = getSetting('video_muted', true)
+			longPressSpeed.value = getSetting('long_press_speed', 2)
+			const themeVal = getSetting('theme', 'dark')
+			applyThemeChange(themeVal)
+		})
 	})
 
 	onUnmounted(() => {
@@ -549,15 +554,14 @@
 	async function submitSub() {
 		const url = subUrl.value.trim()
 		if (!url) return
-		logSection('提交订阅')
-		addLog('MINE', 'submitSub 开始 url=' + url.slice(0, 50))
+
+
 		uni.showLoading({
 			title: '加载订阅...'
 		})
 		try {
-			const t0 = Date.now()
 			await ensureInit(url)
-			addLog('MINE', `ensureInit 完成 (${Date.now() - t0}ms)`)
+
 			addSubHistory(url)
 			setSubUrl(url)
 			// 订阅源已生效，隐藏 loading
@@ -568,30 +572,27 @@
 				duration: 2000
 			})
 			subUrl.value = ''
-			addLog('MINE', 'submitSub 订阅源设置完成')
+
 			// 后台：获取站点元数据（不阻塞 UI）
 			getSites().then(siteData => {
-				addLog('MINE', `getSites 完成 sites=${siteData ? siteData.length : 0}`)
+
 				if (siteData) updateSites(siteData)
 			}).catch(e2 => {
-				addLog('MINE', 'getSites 失败: ' + (e2?.message || ''))
+
 			})
 			// 拉首页数据并 updateHome，对齐 index.vue 注释承诺：mine.vue 拉完后 subUpdated 处理器直接同步即可
 			try {
 				const homeData = await apiHome()
-				addLog('MINE',
-					`apiHome 完成 list=${(homeData?.list || []).length} classes=${(homeData?.['class'] || homeData?.classes || []).length}`
-				)
 				updateHome(homeData)
 			} catch (e3) {
-				addLog('MINE', 'apiHome 失败: ' + (e3?.message || ''))
+
 			}
 			// 通知首页加载数据（此时 store.homeList 已填充，index.vue subUpdated 处理器直接同步）
 			uni.$emit('subUpdated')
 		} catch (e) {
 			uni.hideLoading()
 			const msg = e && e.message ? e.message : '订阅加载失败'
-			addLog('MINE', 'submitSub 失败: ' + msg)
+
 			if (msg.length > 20) {
 				uni.showModal({
 					title: '订阅失败',
@@ -611,8 +612,8 @@
 	async function submitLiveSub() {
 		const url = liveSubUrl.value.trim()
 		if (!url) return
-		logSection('提交直播源')
-		addLog('MINE', 'submitLiveSub 开始 url=' + url.slice(0, 50))
+
+
 		addLiveSubHistory(url)
 		setLiveSubUrl(url)
 		uni.showToast({
@@ -621,9 +622,9 @@
 			duration: 2000
 		})
 		liveSubUrl.value = ''
-		addLog('MINE', 'submitLiveSub 完成')
+
 		// 预热直播初始化：拉订阅 JSON + 解析全频道需 5-10s，提前触发避免切卫视页等待
-		liveInit(url).catch(e => addLog('MINE', 'submitLiveSub liveInit 预热失败: ' + (e?.message || '')))
+		liveInit(url).catch(() => {})
 	}
 
 	function goPage(page) {
@@ -879,6 +880,20 @@
 		&:active {
 			opacity: 0.85;
 		}
+	}
+
+	.editor-logout {
+		display: block;
+		text-align: center;
+		font-size: 24rpx;
+		color: var(--text-secondary);
+		margin-top: 24rpx;
+		padding: 12rpx 0;
+		opacity: 0.7;
+	}
+
+	.editor-logout:active {
+		opacity: 1;
 	}
 
 	/* ========== 统计卡片 ========== */

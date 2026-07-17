@@ -160,6 +160,16 @@ class QueryBuilder {
 		return this
 	}
 
+	/**
+	 * maybeSingle：同 single 取数组首项，但空时不抛错返回 null（对齐 postgREST maybeSingle）
+	 * 用于 profiles 行可能不存在时的兜底查询，避免 .single() 抛 PGRST116 中断登录流
+	 */
+	maybeSingle() {
+		this._single = true
+		this._maybeSingle = true
+		return this
+	}
+
 	limit(n) {
 		this._limitVal = n
 		return this

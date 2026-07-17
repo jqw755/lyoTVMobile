@@ -6,12 +6,6 @@
  * 任何页面调数据方法前 await ensureInit() 即可，无需事件/标记。
  */
 import { store } from '@/utils/appState.js'
-import { addLog as _addLog } from '@/utils/debugLog.js'
-
-// 安全日志：捕获所有异常，不允许任何日志影响插件桥接
-function addLog(tag, msg) {
-  try { _addLog(tag, msg) } catch (e) { console.warn('log err', e) }
-}
 
 const PLUGIN_NAME = 'Fongmi-VodPlugin'
 const LIVE_PLUGIN_NAME = 'Fongmi-LivePlugin'
@@ -46,16 +40,11 @@ function callPlugin(method, args = {}, timeout = 10000) {
   return new Promise((resolve, reject) => {
     const plugin = getPlugin()
     if (!plugin) {
-      addLog('API', `✗ ${method} 插件未注册`)
       return reject(new Error('原生插件未注册，请使用自定义基座运行'))
     }
     if (typeof plugin[method] !== 'function') {
-      addLog('API', `✗ ${method} 方法不存在`)
       return reject(new Error(`插件未暴露方法: ${method}`))
     }
-    const argStr = JSON.stringify(args).slice(0, 80)
-    addLog('API→', `${method}(${argStr}) 调用`)
-    const t0 = Date.now()
 
     let settled = false
     const finish = (fn, val) => {
@@ -71,15 +60,12 @@ function callPlugin(method, args = {}, timeout = 10000) {
 
     try {
       plugin[method](args, (ret) => {
-        const dur = Date.now() - t0
         if (!ret) {
-          addLog('API<-', `✗ ${method} 返回空 (${dur}ms)`)
           return finish(reject, new Error('插件返回空结果'))
         }
         const hasCode = typeof ret.code !== 'undefined'
         const ok = !hasCode || ret.code === 0 || ret.code === 200
         if (!ok) {
-          addLog('API<-', `✗ ${method} code=${ret.code} msg=${ret.msg} (${dur}ms)`)
           return finish(reject, new Error(ret.msg || `插件调用失败 code=${ret.code}`))
         }
         const data = ret.data
@@ -94,24 +80,9 @@ function callPlugin(method, args = {}, timeout = 10000) {
           parsed = data
         }
 
-        const summary = typeof parsed === 'string' ? `${parsed.slice(0, 60)}...` :
-          (Array.isArray(parsed) ? `Array[${parsed.length}]` :
-            (parsed && typeof parsed === 'object' ? `Object{${Object.keys(parsed).slice(0, 3).join(',')}}` : String(parsed)))
-        addLog('API<-', `✓ ${method} (${dur}ms) ${summary}`)
-
-        // 保存完整响应快照，供设置页导出调试
-        try {
-          if (typeof uni !== 'undefined') {
-            const snapKey = '__apiSnapshots'
-            uni[snapKey] = uni[snapKey] || {}
-            uni[snapKey][method] = JSON.parse(JSON.stringify(parsed))
-          }
-        } catch {}
-
         finish(resolve, parsed)
       })
     } catch (e) {
-      addLog('API<-', `✗ ${method} 异常: ${e.message}`)
       finish(reject, new Error(`插件调用异常: ${e.message}`))
     }
   })
@@ -127,12 +98,8 @@ function callLivePlugin(method, args = {}, timeout = 10000) {
       return reject(new Error('直播插件未注册，请使用自定义基座运行'))
     }
     if (typeof plugin[method] !== 'function') {
-      addLog('LIVE', `✗ ${method} 方法不存在`)
       return reject(new Error(`直播插件未暴露方法: ${method}`))
     }
-    const argStr = JSON.stringify(args).slice(0, 80)
-    addLog('LIVE->', `${method}(${argStr}) 调用`)
-    const t0 = Date.now()
 
     let settled = false
     const finish = (fn, val) => {
@@ -143,21 +110,17 @@ function callLivePlugin(method, args = {}, timeout = 10000) {
     }
 
     const timer = setTimeout(() => {
-      addLog('LIVE<-', `✗ ${method} 超时 (${timeout}ms)`)
       finish(reject, new Error(`直播插件 ${method} 超时 (${timeout}ms)`))
     }, timeout)
 
     try {
       plugin[method](args, (ret) => {
-        const dur = Date.now() - t0
         if (!ret) {
-          addLog('LIVE<-', `✗ ${method} 返回空 (${dur}ms)`)
           return finish(reject, new Error('直播插件返回空结果'))
         }
         const hasCode = typeof ret.code !== 'undefined'
         const ok = !hasCode || ret.code === 0 || ret.code === 200
         if (!ok) {
-          addLog('LIVE<-', `✗ ${method} code=${ret.code} msg=${ret.msg} (${dur}ms)`)
           return finish(reject, new Error(ret.msg || `直播插件调用失败 code=${ret.code}`))
         }
         const data = ret.data
@@ -171,13 +134,9 @@ function callLivePlugin(method, args = {}, timeout = 10000) {
         } else {
           parsed = data
         }
-        const summary = Array.isArray(parsed) ? `Array[${parsed.length}]` :
-          (parsed && typeof parsed === 'object' ? `Object{${Object.keys(parsed).slice(0, 3).join(',')}}` : String(parsed))
-        addLog('LIVE<-', `✓ ${method} (${dur}ms) ${summary}`)
         finish(resolve, parsed)
       })
     } catch (e) {
-      addLog('LIVE<-', `✗ ${method} 异常: ${e.message}`)
       finish(reject, new Error(`直播插件调用异常: ${e.message}`))
     }
   })
@@ -192,12 +151,12 @@ export async function initApp() {
     const { updateSites } = await import('@/utils/appState.js')
     updateSites(siteData)
   } catch (e) {
-    addLog('API', `initApp 失败: ${e?.message || ''}`)
+    // 初始化失败静默处理
   }
   // 预热卫视初始化：fongmi 原版在 App 启动即异初始化 LiveConfig，切页命中缓存秒切。
   // 冷启动拉直播订阅 JSON + LiveParser 解析全频道需 5-10s，提前触发避免切卫视页等待。
   if (store.liveSubUrl) {
-    ensureLiveInit(store.liveSubUrl).catch(e => addLog('API', `initApp 预热 liveInit 失败: ${e?.message || ''}`))
+    ensureLiveInit(store.liveSubUrl).catch(() => {})
   }
 }
 
@@ -213,7 +172,6 @@ let _initPromise = null
 export function ensureInit(url) {
   if (!url) return Promise.reject(new Error('need url'))
   if (url === _initUrl && _initPromise) {
-    addLog('API', `ensureInit 命中缓存: ${url.slice(0, 40)}`)
     return _initPromise
   }
   _initUrl = url
@@ -276,7 +234,6 @@ let _livePromise = null
 export function ensureLiveInit(url) {
   if (!url) return Promise.reject(new Error('need url'))
   if (url === _liveUrl && _livePromise) {
-    addLog('LIVE', `ensureLiveInit 命中缓存: ${url.slice(0, 40)}`)
     return _livePromise
   }
   _liveUrl = url

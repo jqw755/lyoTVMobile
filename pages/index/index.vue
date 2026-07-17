@@ -6,7 +6,6 @@
 			<view class="title-bar">
 				<text class="title-bar-logo">乐意欧TV</text>
 				<view class="title-bar-icons">
-					<uni-icons type="search" size="26" color="#888" @tap="goSearch" />
 					<uni-icons type="star" size="27" color="#888" @tap="goFav" />
 					<image class="title-bar-history" src="/static/image/icon_history.png" mode="aspectFit"
 						@tap="goHistory" />
@@ -24,9 +23,6 @@
 			<uni-icons type="arrowup" size="28" color="#fff" />
 		</view>
 
-		<!-- 调试面板 -->
-		<DebugPanel />
-
 		<!-- 首次加载中 -->
 		<view v-if="loading" class="loading-center">
 		 <uni-icons type="spinner-cycle" size="32" color="#999" />
@@ -41,10 +37,9 @@
 
 		<!-- 可滚动列表（内联 v-for 替换 vod-grid 子组件：uni-app x 下 Options API 子组件对 ref prop 响应式追踪断链） -->
 		<scroll-view ref="scrollView" :scroll-top="scrollTop" v-show="!loading && !noSource" class="scroll-body" scroll-y @scrolltolower="onLoadMore" lower-threshold="100"
-		 @scroll="onScroll">
-		 <view class="grid-wrapper">
-		  <view class="grid">
-		   <view v-for="(item, idx) in list" :key="(item.vod_id && item.vod_id !== '0') ? item.vod_id : ('idx-' + idx)" class="grid-item" :style="{ width: itemWidth + 'rpx' }" @tap="goDetail(item)">
+		 @scroll="onScroll">			<view class="grid-wrapper">
+			  <view class="grid" :style="{ gridTemplateColumns: gridTemplateCols, gap: '24rpx' }">
+			   <view v-for="(item, idx) in list" :key="(item.vod_id && item.vod_id !== '0') ? item.vod_id : ('idx-' + idx)" class="grid-item" @tap="goDetail(item)">
 		    <view class="grid-card">
 		     <view class="grid-poster-wrap">
 		      <image class="grid-poster" :src="item.vod_pic" mode="aspectFill" lazy-load />
@@ -67,14 +62,15 @@
 	  ref,
 	  computed,
 	  onMounted,
+	  onUnmounted,
 	  nextTick
 	 } from 'vue'
 	import {
 	  onShow
 	} from '@dcloudio/uni-app'
 	import {
-		themeStyle
-	} from '@/utils/theme.js'
+	   themeStyle
+	  } from '@/utils/theme.js'
 	import {
 	 home,
 	 category
@@ -93,11 +89,8 @@
 	} from '@/utils/appState.js'
 	import CategoryNav from '@/components/category-nav.vue'
 	import VodGrid from '@/components/vod-grid.vue'
-	import DebugPanel from '@/components/debug-panel.vue'
-	import { addLog } from '@/utils/debugLog.js'
-	import { logSection } from '@/utils/debugLog.js'
 	import {
-		useStatusBar
+	 useStatusBar
 	} from '@/utils/useStatusBar.js'
 
 	const {
@@ -110,14 +103,13 @@
 	}
 
 	const classes = ref(store.classes)
-	const list = ref(store.homeList)
-	// 内联 v-for 卡片宽度：对齐 vod-grid 的 SIZE_WIDTH_MAP（3=大图200rpx 默认）
-	const SIZE_WIDTH_MAP = { 3: 200, 4: 150, 5: 120 }
-	const itemWidth = ref(SIZE_WIDTH_MAP[getSetting('grid_cols', 3)] || 200)
+	const list = ref(store.homeList)	// 网格列数（3/4/5），用于 CSS Grid 的 repeat(N, 1fr)
+	const gridCols = ref(getSetting('grid_cols', 3))
+	const gridTemplateCols = computed(() => `repeat(${gridCols.value}, 1fr)`)
 	// 格式化角标：去除"评分"前缀和尾部标点，只保留数值，0不展示（复刻 vod-grid formatBadge）
 	function formatBadge(text) {
 		if (!text || text === '0') return ''
-		const cleaned = text.replace(/^评分|[，,。、；：""''「」【】《》（）!！?？\s]+$/g, '')
+		const cleaned = text.replace(/^评分|[，,。、；;：""''「」【】《》（）!！?？\s]+$/g, '')
 		if (cleaned === '0') return ''
 		return cleaned
 	}
@@ -145,8 +137,15 @@
 	// 等事件处理器手动赋值完成，watch 与之重复且不必要的。
 
 	onMounted(async () => {
-		logSection('首页加载')
 		initPage()
+		// 监听列数变更（来自「我的」页面）
+		uni.$on('gridColsChanged', (val) => {
+			if (val != null) gridCols.value = val
+		})
+	})
+
+	onUnmounted(() => {
+		uni.$off('gridColsChanged')
 	})
 
 	// 从 mine 页切回时，store 可能已有新数据
@@ -155,7 +154,7 @@
 			initPage()
 		} else if (store.homeList.length > 0 && list.value.length === 0) {
 			// 切回时如果 store 有数据但页面列表为空，同步
-			addLog('INDEX', `onShow 同步: store.homeList=${store.homeList.length} list=${list.value.length}`)
+			
 			classes.value = store.classes
 			list.value = store.homeList
 			loading.value = false
@@ -179,7 +178,7 @@
 			activeTid.value = ''
 			noMore.value = true
 			loading.value = false
-			addLog('INDEX', `onMounted 显示缓存: classes=${classes.value.length} list=${list.value.length}`)
+			
 			// 后台刷新
 			loadHome(true)
 		} else {
@@ -193,23 +192,22 @@
 	 * @param {boolean} background - 后台刷新模式：不改变 loading 状态，已在显示的缓存不闪烁
 	 */
 	async function loadHome(background = false) {
-	 addLog('INDEX', `loadHome 开始${background ? ' (后台刷新)' : ''}`)
+	 
 	 noSource.value = false
 	 if (!background) loading.value = true
 	 try {
 	  // 确保插件已初始化（缓存 Promise，重复调用不阻塞）
 	  if (store.subUrl) await ensureInit(store.subUrl)
-	  const t0 = Date.now()
 	  const data = await home()
-			addLog('INDEX', `home() 完成 (${Date.now() - t0}ms) classes=${(data["class"] || data.classes || []).length} list=${(data.list || []).length}`)
+			
 			classes.value = data["class"] || data.classes || []
 			list.value = data.list || []
 			updateHome(data)
 			activeTid.value = ''
 			noMore.value = true
-			addLog('INDEX', `状态已更新: loading=${loading.value} noSource=${noSource.value} classes=${classes.value.length} list=${list.value.length} tabList=${tabList.value.length}`)
+			
 		} catch (e) {
-			addLog('INDEX', 'loadHome 失败: ' + (e?.message || ''))
+			
 			uni.showToast({
 				title: e?.message || '加载失败',
 				icon: 'none',
@@ -221,8 +219,8 @@
 	}
 
 	uni.$on('subUpdated', () => {
-		logSection('订阅更新')
-		addLog('INDEX', `subUpdated 收到 homeList.length=${store.homeList.length}`)
+		
+		
 		// mine.vue 已 await apiHome() + updateHome 后才 emit，此时 store 已填充首页数据，直接同步本地状态即可
 		if (store.homeList.length > 0) {
 			classes.value = store.classes
@@ -233,7 +231,7 @@
 			loadingMore.value = false
 			loading.value = false
 			noSource.value = false
-			addLog('INDEX', `subUpdated 同步完成 classes=${classes.value.length} list=${list.value.length}`)
+			
 		} else {
 			// mine.vue 拉首页失败时兜底：自己再拉一次，并重置 loading/noSource 标志避免页面停留空状态
 			noSource.value = false
@@ -242,6 +240,7 @@
 	})
 
 	async function onCategoryChange(item) {
+		// 立即高亮选中状态，不等数据加载
 		activeTid.value = item.type_id
 		page.value = 1
 		noMore.value = false
@@ -253,6 +252,8 @@
 			return
 		}
 
+		// 立即清空旧列表，显示 loading 状态，让用户知道 tab 生效了
+		list.value = []
 		loadingMore.value = true
 		try {
 			const data = await category(item.type_id, 1)
@@ -294,13 +295,15 @@
 	function goDetail(item) {
 		addHistory(item)
 		const name = item.vod_name || ''
-		uni.navigateTo({
-			url: '/pages/search/search?keyword=' + encodeURIComponent(name)
+		// switchTab 不支持 URL 参数，用 storage 传递关键词
+		uni.setStorageSync('lyotv_search_keyword', name)
+		uni.switchTab({
+			url: '/pages/search/search'
 		})
 	}
 
 	function goSearch() {
-		uni.navigateTo({
+		uni.switchTab({
 			url: '/pages/search/search'
 		})
 	}
@@ -318,7 +321,7 @@
 	}
 
 	function onScroll(e) {
-		showTopBtn.value = e.detail.scrollTop > 600
+		showTopBtn.value = e.detail.scrollTop > 500
 	}
 
 	function scrollToTop() {
@@ -426,10 +429,7 @@
 		padding: 0 24rpx;
 	}
 	.grid {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-start;
-		gap: 24rpx;
+		display: grid;
 	}
 	.grid-item {
 		box-sizing: border-box;
@@ -469,7 +469,7 @@
 	.grid-title {
 		font-size: var(--text-sm);
 		font-weight: var(--weight-medium);
-		color: var(--text-primary);
+		color: #ffffff;
 		line-height: 1.3;
 		display: -webkit-box;
 		-webkit-line-clamp: 1;

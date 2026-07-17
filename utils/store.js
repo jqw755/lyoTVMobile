@@ -19,6 +19,7 @@ const STORAGE_KEYS = {
   SUB_HISTORY: 'lyotv_sub_history',
   LIVE_SUB_HISTORY: 'lyotv_live_sub_history',
   SUB_URL: 'lyotv_sub_url',
+  PROFILE_CACHE: 'lyotv_profile_cache', // 用户资料本地缓存：减云端调用，token失效/退出/重登才拉云端
 }
 
 // ==================== 认证 ====================
@@ -28,6 +29,7 @@ let _profile = null
 let _preferences = null       // 内存缓存（当前会话）
 let _prefsDirty = false       // 是否有未同步的变更
 let _prefsSyncTimer = null    // 防抖定时器
+let _loginInProgress = false  // 登录中标记，避免 onAuthStateChange 重复拉取
 
 const PREFS_CACHE_KEY = 'lyotv_prefs_cache'
 
@@ -167,18 +169,27 @@ export async function initAuth() {
   const { data } = await supabase.auth.getSession()
   _currentUser = data?.session?.user || null
   if (_currentUser) {
-    await _loadProfile()
+    // 优先用本地 profile 缓存（减云端调用），无缓存才拉云端
+    if (!_loadProfileFromCache()) {
+      await _loadProfile()
+    }
   }
-  // 监听登录态变化
+  // 监听登录态变化：仅 SIGNED_IN/SIGNED_OUT 处理，TOKEN_REFRESHED 等用本地缓存
   supabase.auth.onAuthStateChange(async (event, session) => {
     _currentUser = session?.user || null
-    if (_currentUser) {
-      await _loadProfile()
-    } else {
+    if (event === 'SIGNED_IN') {
+      // login() 已显式调用 _loadProfile()，这里跳过避免重复
+      if (!_loginInProgress) {
+        await _loadProfile()
+      }
+      _loginInProgress = false
+    } else if (event === 'SIGNED_OUT') {
       _profile = null
+      _clearProfileCache()
       // 不清 _preferences：logout() 已显式处理缓存恢复
       // 被动登出（session 过期等）也应保留用户的偏好设定
     }
+    // TOKEN_REFRESHED / INITIAL_SESSION 等事件：不改 _profile，沿用本地缓存
   })
   return _currentUser
 }
@@ -191,16 +202,76 @@ export function getProfile() {
   return _profile
 }
 
+/**
+ * 从本地缓存载入 profile + preferences（减云端调用）
+ * App 启动 / onAuthStateChange 的 TOKEN_REFRESHED 等非登录事件用此，不拉云端
+ * 返回 true 表示缓存命中，false 表示无缓存需拉云端
+ */
+function _loadProfileFromCache() {
+  try {
+    const cached = uni.getStorageSync(STORAGE_KEYS.PROFILE_CACHE)
+    if (cached) {
+      _profile = cached
+      _preferences = cached.preferences || {}
+      uni.$emit('preferencesLoaded', _preferences)
+      return true
+    }
+  } catch { /* ignore */ }
+  return false
+}
+
+/** profile 存本地缓存（拉云端成功后 / saveProfile 后调用） */
+function _saveProfileToCache() {
+  try {
+    uni.setStorageSync(STORAGE_KEYS.PROFILE_CACHE, _profile || {})
+  } catch { /* ignore */ }
+}
+
+/** 清本地 profile 缓存（退出登录时） */
+function _clearProfileCache() {
+  try {
+    uni.removeStorageSync(STORAGE_KEYS.PROFILE_CACHE)
+  } catch { /* ignore */ }
+}
+
+/**
+ * 从云端拉 profile：仅 login/register/initAuth 首次调用，拉完后存本地
+ * 后续 saveProfile 改本地缓存，token失效/退出/重登才再拉云端
+ */
 async function _loadProfile() {
   if (!_currentUser) return
+  // maybeSingle 兜底：profiles 行不存在时返回 null 不抛错（.single 会抛 PGRST116）
   const { data } = await supabase
     .from('profiles')
     .select('nickname, avatar_url, introduction, preferences')
     .eq('id', _currentUser.id)
-    .single()
-  _profile = data || null
-  _preferences = data?.preferences || {}
+    .maybeSingle()
+  // 老用户或 register 没 insert 成的兜底：profiles 行不存在时自动创建
+  if (!data) {
+    try {
+      await supabase.from('profiles').insert({
+        id: _currentUser.id,
+        nickname: '',
+        introduction: '观看精彩影视',
+        avatar_url: '🐱',
+        preferences: {},
+      })
+      // 重新查一次拿回新创建的行
+      const { data: retry } = await supabase
+        .from('profiles')
+        .select('nickname, avatar_url, introduction, preferences')
+        .eq('id', _currentUser.id)
+        .maybeSingle()
+      _profile = retry || {}
+    } catch {
+      _profile = {}
+    }
+  } else {
+    _profile = data
+  }
+  _preferences = _profile?.preferences || {}
   _saveLocalPreferences() // 缓存到本地，下次启动秒回
+  _saveProfileToCache() // profile 也存本地，后续减云端调用
   // 通知 App.vue 重新应用主题（登录后云端偏好已加载）
   uni.$emit('preferencesLoaded', _preferences)
 }
@@ -216,6 +287,7 @@ export async function login(username, password) {
   })
   if (error) throw new Error(translateAuthError(error.message))
   _currentUser = data.user
+  _loginInProgress = true
   await _loadProfile()
   return _currentUser
 }
@@ -257,6 +329,21 @@ export async function register(username, password) {
     password,
   })
   if (error) throw new Error(translateAuthError(error.message))
+  // 注册成功后立即创建 profiles 行：后续 _loadProfile/.single() 查空会抛错，
+  // 且 updateProfile/favorites 的 .eq('id', user.id) 因无行 + RLS 拒写
+  if (data?.user?.id) {
+    try {
+      await supabase.from('profiles').insert({
+        id: data.user.id,
+        nickname: username.trim(),
+        introduction: '观看精彩影视',
+        avatar_url: '🐱',
+        preferences: {},
+      })
+    } catch {
+      // profiles 行可能由数据库 trigger 自动创建（若配了），insert 冲突静默
+    }
+  }
   // 注册后自动清除当前 session，避免产生歧义
   await supabase.auth.signOut()
   return true
@@ -309,6 +396,8 @@ export async function updateProfile(updates) {
   // 立即更新本地缓存
   if (_profile) _profile = { ..._profile, ...updates }
   else _profile = updates
+  // 存本地缓存：后续读 profile 不拉云端，token失效/退出/重登才再拉
+  _saveProfileToCache()
 
   // 标记待同步（防抖 30s 后批量上传云端）
   _markProfileDirty(updates)
@@ -348,6 +437,7 @@ export async function getFavorites() {
     const { data, error } = await supabase
       .from('favorites')
       .select('*')
+      .eq('user_id', _currentUser.id)
       .order('fav_time', { ascending: false })
     if (!error && data) return data
   } catch { /* ignore */ }
@@ -368,6 +458,7 @@ export async function getFavoritesPaginated(page = 1, pageSize = 20) {
     const { data, error } = await supabase
       .from('favorites')
       .select('*')
+      .eq('user_id', _currentUser.id)
       .order('fav_time', { ascending: false })
       .range(start, end)
     if (!error && data) {

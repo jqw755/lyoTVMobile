@@ -4,7 +4,7 @@
 		<view class="header-bg" :style="{ paddingTop: (statusBarHeight + 10) + 'px' }">
 			<!-- 顶部自定义导航栏 -->
 			<view class="nav-bar">
-				<uni-icons type="left" size="24" color="#888" class="nav-back" @tap="goBack" />
+				<!-- <uni-icons type="left" size="24" color="#888" class="nav-back" @tap="goBack" /> -->
 				<view class="nav-search">
 					<uni-icons type="search" size="18" color="#888" />
 					<input v-model="keyword" placeholder="搜索影片" maxlength="20" placeholder-class="nav-placeholder"
@@ -94,11 +94,14 @@
 
 <script setup>
 	import {
-		ref,
-		computed,
-		onMounted,
-		watch
-	} from 'vue'
+	     ref,
+	     computed,
+	     onMounted,
+	     watch
+	    } from 'vue'
+	  import {
+	   onShow
+	  } from '@dcloudio/uni-app'
 	import {
 		themeStyle
 	} from '@/utils/theme.js'
@@ -152,8 +155,11 @@
 		}
 	}
 
-	// 站点列表
-	const siteList = computed(() => store.sites || [])
+	// 站点列表（过滤掉已完成搜索但结果为0的站源）
+	const siteList = computed(() => {
+		const sites = store.sites || []
+		return sites.filter(s => !siteDone.value[s.key] || (siteResults.value[s.key] || []).length > 0)
+	})
 	const siteResults = ref({})
 	const siteDone = ref({})
 	const currentKey = ref('__all__')
@@ -179,21 +185,26 @@
 	})
 
 	onMounted(() => {
-		// 加载搜索历史
-		try {
-			historyTags.value = uni.getStorageSync('lyotv_search_history') || []
-		} catch {}
+	 // 加载搜索历史
+	 try {
+	  historyTags.value = uni.getStorageSync('lyotv_search_history') || []
+	 } catch {}
 
-		// 加载热门搜索（同 fongmi 插件：先从缓存展示，再异步请求刷新）
-		loadHot()
-
-		// 处理首页跳转入参
-		const kw = getPageKeyword()
-		if (kw) {
-			keyword.value = kw
-			setTimeout(() => doSearch(), 200)
-		}
+	 // 加载热门搜索（同 fongmi 插件：先从缓存展示，再异步请求刷新）
+	 loadHot()
 	})
+
+	onShow(() => {
+	  // 处理首页跳转入参（switchTab 不支持 URL 参数，用 storage 传递）
+	  try {
+	   const kw = uni.getStorageSync('lyotv_search_keyword') || ''
+	   if (kw) {
+	    uni.removeStorageSync('lyotv_search_keyword')
+	    keyword.value = kw
+	    doSearch()
+	   }
+	  } catch {}
+	 })
 
 	function getPageKeyword() {
 		try {
@@ -328,12 +339,11 @@
 		display: flex;
 		align-items: center;
 		gap: 10rpx;
-		background: rgba(30, 30, 30, 0.65);
-		backdrop-filter: blur(8px);
+		background: var(--card-hover);
 		border-radius: 40rpx;
 		padding: 4rpx 20rpx;
 		height: 60rpx;
-		border: 2rpx solid #6b6b6b;
+		border: 2rpx solid var(--border);
 
 		input {
 			flex: 1;
@@ -499,7 +509,7 @@
 	}
 
 	.left {
-		width: 200rpx;
+		width: 226rpx;
 		background: var(--card);
 		flex-shrink: 0;
 
@@ -507,7 +517,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			padding: 18rpx 14rpx;
+			padding: 20rpx 16rpx;
 			border-bottom: 1rpx solid var(--border);
 
 			&.active {
@@ -564,7 +574,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			padding: 16rpx 0 8rpx;
+			padding: 16rpx 0 12rpx;
 			position: sticky;
 			top: 0;
 			background: var(--bg-primary);
@@ -575,6 +585,7 @@
 			font-size: 28rpx;
 			font-weight: 600;
 			color: var(--text-primary);
+			padding-left: 6rpx;
 		}
 
 		.right-count {
