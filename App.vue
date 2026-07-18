@@ -38,11 +38,11 @@
 		initAuth,
 		flushPreferences,
 		flushProfile,
-		loadLocalPreferences
+		loadLocalPreferences,
+		getSetting
 	} from '@/utils/store.js'
 	import {
-		initTheme,
-		setTheme
+		initTheme
 	} from '@/utils/theme.js'
 	import {
 		debugLog,
@@ -53,28 +53,31 @@
 		copyDebugLogs
 	} from '@/utils/debugLogger.js'
 
+	const handlePreferencesLoaded = (prefs) => {
+		debugLog('APP', 'preferencesLoaded fired, prefs=', prefs)
+		// 主题使用共享 ref，重新读取后所有已挂载页面都会立即更新。
+		initTheme()
+		// 通知当前仍挂载的 tab 页和播放器即时应用其余偏好。
+		uni.$emit('gridColsChanged', getSetting('grid_cols', 3))
+		uni.$emit('mutedChanged', getSetting('video_muted', true))
+		uni.$emit('longPressSpeedChanged', getSetting('long_press_speed', 2))
+	}
+
 	onMounted(async () => {
 	   debugLog('APP', 'App onMounted 开始')
-	   // 1. 读取主题（theme ref 响应式，各页面 :style="themeStyle" 自动跟随）
-	   initTheme()
-	   // 2. 从本地缓存加载偏好（未登录也能用上次设定）
+	   // 1. 先加载本地偏好，再初始化主题，避免首次渲染使用错误的默认值。
 	   loadLocalPreferences()
-	   // 3. 先注册监听器，避免 initAuth 内部 emit 的 preferencesLoaded 漏掉
-	   uni.$on('preferencesLoaded', (prefs) => {
-	    debugLog('APP', 'preferencesLoaded fired, prefs=', prefs)
-	   if (prefs && typeof prefs === 'object' && 'theme' in prefs) {
-	    initTheme()
-	   } else if (!prefs) {
-	    // 退出登录 -> 重置为默认深色
-	    setTheme('dark')
-	   }
-	   })
-	   // 4. 初始化登录态（已登录则用云端偏好覆盖本地）
-	   await initAuth()
-	   // 5. 登录后重新读取主题（云端可能覆盖了本地缓存的值）
 	   initTheme()
-	   // 6. 启动订阅源（await 确保首页 onMounted 时插件已就绪）
-	   await initApp()
+	   // 2. 先注册监听器，避免 initAuth 内部 emit 的 preferencesLoaded 漏掉。
+	   uni.$on('preferencesLoaded', handlePreferencesLoaded)
+	   // 4. 与 fongmi HomeActivity 一致：订阅配置从启动时就并行预热，不等待云端认证。
+	   const appInitPromise = initApp()
+	   // 5. 初始化登录态（已登录则用云端偏好覆盖本地）
+	   await initAuth()
+	   // 6. 登录后重新读取主题（云端可能覆盖了本地缓存的值）
+	   initTheme()
+	   // 页面不等待配置网络请求；首页和卫视页各自复用同一初始化 Promise。
+	   appInitPromise.catch(() => {})
 	   debugLog('APP', 'App onMounted 完成')
 	  })
 
@@ -110,8 +113,7 @@
 
 	// 组件卸载时清理全局监听
 	onUnmounted(() => {
-		uni.$off('themeChange')
-		uni.$off('preferencesLoaded')
+		uni.$off('preferencesLoaded', handlePreferencesLoaded)
 	})
 </script>
 

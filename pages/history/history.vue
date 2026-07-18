@@ -35,14 +35,31 @@
 		   <view class="section-header">
 		    <text class="section-title">{{ section.key }}</text>
 		   </view>
-		   <vod-grid :items="section.items" @itemTap="goDetail">
-		    <template #overlay="{ item }">
-		     <text v-if="item.episode" class="grid-badge-episode">{{ item.episode }}</text>
-		     <view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
-		      <uni-icons type="closeempty" size="16" color="#fff" />
+		   <!-- uni-app x 下 Options API 子组件接收 ref 数组会失去响应式，改为页面内联渲染。 -->
+		   <view class="grid-wrapper">
+		    <view class="grid" :style="{ gridTemplateColumns: gridTemplateCols, gap: '20rpx' }">
+		     <view
+		      v-for="(item, itemIndex) in section.items"
+		      :key="item.vod_id || `${item.view_time || item.time || si}-${itemIndex}`"
+		      class="grid-item"
+		      @tap="goDetail(item)"
+		     >
+		      <view class="grid-card">
+		       <view class="grid-poster-wrap">
+		        <image class="grid-poster" :src="item.vod_pic" mode="aspectFill" lazy-load />
+		        <text v-if="formatBadge(item.vod_remarks)" class="grid-badge">{{ formatBadge(item.vod_remarks) }}</text>
+		        <text v-if="item.episode" class="grid-badge-episode">{{ item.episode }}</text>
+		        <view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
+		         <uni-icons type="closeempty" size="16" color="#fff" />
+		        </view>
+		       </view>
+		       <view class="grid-info">
+		        <text class="grid-title">{{ item.vod_name || '未知影片' }}</text>
+		       </view>
+		      </view>
 		     </view>
-		    </template>
-		   </vod-grid>
+		    </view>
+		   </view>
 		  </view>
 			<uni-load-more :status="loadMoreStatus" />
 		</scroll-view>
@@ -63,6 +80,7 @@
 	} from '@dcloudio/uni-app'
 	import {
 		getHistory,
+		getSetting,
 		clearHistory,
 		addHistory,
 		removeHistoryItem,
@@ -77,9 +95,17 @@
 
 	const list = ref([])
 	const loading = ref(false)
+	const gridCols = ref(getSetting('grid_cols', 3))
+	const gridTemplateCols = computed(() => `repeat(${gridCols.value}, 1fr)`)
 	const displayCount = ref(20)
 	const hasMore = ref(true)
 	const isEditing = ref(false)
+
+	function formatBadge(text) {
+		if (!text || text === '0') return ''
+		const cleaned = String(text).replace(/^评分|[，,。、；;：""''「」【】《》（）!！?？\s]+$/g, '')
+		return cleaned === '0' ? '' : cleaned
+	}
 
 	function groupByTime(items, timeField = 'view_time') {
 		const groups = []
@@ -107,7 +133,7 @@
 		// 将 key 格式化为显示文本
 		for (const g of groups) {
 			const d = g.date
-			g.key = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+			g.key = `${d.getFullYear()}年${pad(d.getMonth() + 1)}月${pad(d.getDate())}日`
 		}
 		return groups
 	}
@@ -143,6 +169,7 @@
 		displayCount.value = 20
 		hasMore.value = true
 		list.value = getHistory()
+		gridCols.value = getSetting('grid_cols', 3)
 		loading.value = false
 	}
 
@@ -206,6 +233,10 @@
 
 	function goDetail(item) {
 		if (isEditing.value) return
+		if (!item?.vod_id) {
+			uni.showToast({ title: '该记录缺少影片 ID', icon: 'none' })
+			return
+		}
 		addHistory(item)
 		uni.navigateTo({
 			url: `/pages/detail/detail?id=${item.vod_id}&key=${item.site_key || ''}`
@@ -373,6 +404,53 @@
 		}
 	}
 
+	/* 内联网格：规避 uni-app x 下 vod-grid 子组件的 ref prop 响应式断链。 */
+	.grid-wrapper {
+		max-width: 750rpx;
+		margin: 0 auto;
+		padding: 0 24rpx;
+	}
+
+	.grid {
+		display: grid;
+	}
+
+	.grid-item {
+		box-sizing: border-box;
+		min-width: 0;
+	}
+
+	.grid-card {
+		border-radius: 14rpx;
+		overflow: hidden;
+		background: var(--card);
+		box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.08);
+	}
+
+	.grid-poster-wrap {
+		position: relative;
+		width: 100%;
+	}
+
+	.grid-poster {
+		width: 100%;
+		height: 220rpx;
+		display: block;
+		background: var(--card-hover);
+	}
+
+	.grid-badge {
+		position: absolute;
+		top: 10rpx;
+		left: 10rpx;
+		background: rgba(254, 128, 39, 0.9);
+		color: #fff;
+		font-size: 18rpx;
+		padding: 2rpx 10rpx;
+		border-radius: 6rpx;
+		line-height: 1.4;
+	}
+
 	.grid-badge-episode {
 		position: absolute;
 		bottom: 8rpx;
@@ -389,8 +467,8 @@
 	/* 编辑模式删除按钮 — 全圆灰底 */
 	.grid-remove {
 		position: absolute;
-		top: -12rpx;
-		right: -12rpx;
+		top: 8rpx;
+		right: 8rpx;
 		width: 44rpx;
 		height: 44rpx;
 		border-radius: 50%;

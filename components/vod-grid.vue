@@ -23,10 +23,15 @@
 <script>
 	// 格式化角标：去除"评分"前缀和尾部标点，只保留数值，0不展示
 	function formatBadge(text) {
-		if (!text || text === '0') return ''
-		const cleaned = text.replace(/^评分|[，,。、；：""''「」【】《》（）!！?？\s]+$/g, '')
-		if (cleaned === '0') return ''
-		return cleaned
+		if (text == null) return ''
+		const raw = String(text).trim()
+		if (!raw || raw === '0') return ''
+		if (raw.includes('评分')) {
+			const match = raw.match(/评分\D*([0-9]+(?:\.[0-9]+)?)/)
+			if (!match || Number(match[1]) === 0) return ''
+			return match[1]
+		}
+		return raw.replace(/[，,。、；;：:"'「」【】《》（）!！?？\s]+$/g, '')
 	}
 
 	// 网格列数 3/4/5，用于 CSS Grid repeat(N, 1fr)

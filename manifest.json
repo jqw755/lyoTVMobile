@@ -8,6 +8,9 @@
 	"app-plus": {
 		"usingComponents": true,
 		"nviceCompiler": "uni-app",
+		"screenOrientation": [
+			"portrait-primary"
+		],
 		"compilerVersion": 3,
 		"splashscreen": {
 			"alwaysShowBeforeRender": false,

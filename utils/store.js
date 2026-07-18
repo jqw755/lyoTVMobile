@@ -529,21 +529,45 @@ export function getHistory() {
   }
 }
 
-export function addHistory(vod, episode = '', progress = 0) {
+export function addHistory(vod, episode, progress, flag) {
+  if (!vod?.vod_id) return getHistory()
+
   const now = Date.now()
   let cached = []
   try {
     cached = uni.getStorageSync(STORAGE_KEYS.HISTORY) || []
   } catch { /* ignore */ }
-  cached = cached.filter((item) => item.vod_id !== vod.vod_id)
+
+  const siteKey = vod.site_key || ''
+  const isSameItem = (item) => {
+    if (item.vod_id !== vod.vod_id) return false
+    const itemSiteKey = item.site_key || ''
+    return !siteKey || !itemSiteKey || itemSiteKey === siteKey
+  }
+  const existing = cached.find(isSameItem)
+  cached = cached.filter((item) => !isSameItem(item))
+
+  // 仅浏览/打开详情时不再把已有播放状态覆盖成空集、0 秒。
+  // 只有播放器显式传入 episode/progress 时才更新续播位置。
+  const resolvedEpisode = episode === undefined
+    ? (vod.episode || existing?.episode || '')
+    : episode
+  const resolvedProgress = progress === undefined
+    ? Number(vod.progress ?? existing?.progress ?? 0) || 0
+    : Number(progress) || 0
+  const resolvedFlag = flag === undefined
+    ? (vod.flag || existing?.flag || '')
+    : flag
+
   cached.unshift({
     vod_id: vod.vod_id,
     vod_name: vod.vod_name,
     vod_pic: vod.vod_pic,
     vod_remarks: vod.vod_remarks,
-    site_key: vod.site_key || '',
-    episode,
-    progress,
+    site_key: siteKey || existing?.site_key || '',
+    episode: resolvedEpisode,
+    progress: resolvedProgress,
+    flag: resolvedFlag,
     view_time: now,
     time: now,
   })

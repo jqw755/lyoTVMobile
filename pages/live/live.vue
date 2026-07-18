@@ -1,14 +1,18 @@
 <template>
 	<view class="page" :style="themeStyle" :class="{ 'fullscreen-active': isFullscreen }">
+		<!-- 状态栏使用独立黑色占位，避免浅色主题露出白底。 -->
+		<view class="player-status-bar" v-if="!isFullscreen" :style="{ height: statusBarHeight + 'px' }"></view>
 		<!-- 播放器区域 -->
 		<view class="player-area">
 		    <video id="live-player" :key="videoKey" :src="videoUrl" :autoplay="hasSource" :muted="muted"
-		     :controls="isFullscreen" :page-gesture="true" :show-mute-btn="true" :enable-progress-gesture="false"
+		     :controls="true" :page-gesture="true" :show-mute-btn="true" :enable-progress-gesture="false"
 		     object-fit="contain" :title="currentChannelName" :enable-play-gesture="true" :vslide-gesture="true"
 		     :vslide-gesture-in-fullscreen="true" :mobilenet-hint-type="1" :http-cache="false"
 		     play-btn-position="center" :rate="playbackRate" :is-live="true" :header="videoHeaders"
 		     :play-strategy="2" style="width: 100%; height: 100%" @error="onVideoError"
-		     @fullscreenchange="onFullscreenChange" @tap="onPlayerTap" />
+		     @fullscreenchange="onFullscreenChange">
+		    </video>
+		    <!-- 原生 video 会吞掉 tap；用常驻的原生覆盖层负责唤出自定义控制栏。 -->
 
 		    <!-- 加载/错误/待播放提示 -->
 		    <view class="player-status" v-if="!hasSource && loading">
@@ -24,15 +28,7 @@
 		            <text class="status-text error">{{ errorMsg }}</text>
 		           </view>
 
-		           <!-- 非全屏时播放器底部控制条（声音开关 + 全屏） -->
-		           <cover-view class="player-controls-bar" v-if="hasSource && !isFullscreen">
-		            <cover-view class="ctrl-btn left" @tap.stop="toggleMute">
-		             <cover-view class="ctrl-icon">{{ muted ? '🔇' : '🔊' }}</cover-view>
-		            </cover-view>
-		            <cover-view class="ctrl-btn right" @tap.stop="enterFullscreen">
-		             <cover-view class="ctrl-icon">⛶</cover-view>
-		            </cover-view>
-		           </cover-view>
+		           <!-- App-Vue 的 cover-view 不可嵌套，背景和按钮必须是兄弟节点。 -->
 		          </view>
 
 		<!-- 内容区域 -->
@@ -96,34 +92,12 @@
 			</view>
 		</view>
 
-		<!-- 全屏时的快捷操作覆盖层（视频上叠加） -->
-		<cover-view class="fullscreen-overlay" v-if="isFullscreen && hasSource" @tap="onToggleUI">
-			<cover-view class="fs-top" v-if="showFSControls">
-				<cover-view class="fs-back" @tap.stop="exitFullscreen">
-					<uni-icons type="arrowleft" size="20" color="#fff" />
-				</cover-view>
-				<cover-view class="fs-title">{{ currentChannelName }}</cover-view>
-			</cover-view>
-			<cover-view class="fs-bottom" v-if="showFSControls">
-				<cover-view class="fs-btn" @tap.stop="prevChannel">
-					<uni-icons type="arrowleft" size="20" color="#fff" />
-					<cover-view class="fs-btn-label">上一个</cover-view>
-				</cover-view>
-				<cover-view class="fs-btn" @tap.stop="switchLine(null)">
-					<cover-view class="fs-btn-label">换源</cover-view>
-					<cover-view class="fs-btn-line">源{{ currentLine + 1 }}</cover-view>
-				</cover-view>
-				<cover-view class="fs-btn" @tap.stop="nextChannel">
-					<cover-view class="fs-btn-label">下一个</cover-view>
-					<uni-icons type="arrowright" size="20" color="#fff" />
-				</cover-view>
-			</cover-view>
-		</cover-view>
 
 		 </view>
 </template>
 
 <script setup>
+	import { useTabBack } from '@/utils/useTabBack.js'
 	import {
 		ref,
 		computed,
@@ -159,8 +133,15 @@
 	import {
 		useVideoPlayer
 	} from '@/utils/useVideoPlayer.js'
+	import {
+		useStatusBar
+	} from '@/utils/useStatusBar.js'
+
+	const { statusBarHeight } = useStatusBar()
 
 	// ===== 播放器共享状态（useVideoPlayer） =====
+	useTabBack()
+
 	const {
 	   videoKey,
 	   muted,
@@ -173,6 +154,8 @@
 	   exitFullscreen,
 	   toggleMute,
 	  } = useVideoPlayer('live-player')
+
+	usePageListeners({ mutedRef: muted })
 
 	// ===== 页面独有状态 =====
 	const groups = ref([])
@@ -189,6 +172,7 @@
 	const loading = ref(true)
 	const errorMsg = ref('')
 	const showFSControls = ref(false)
+	const showPlayerControls = ref(false)
 	const currentLine = ref(0)
 	const lineCount = ref(1)
 	// 手动换源下拉：openSourceKey 记录当前展开换源列表的频道 key（ch.name+i），null 表示全收
@@ -198,6 +182,9 @@
 	let isInitialized = false // 防止重复初始化
 	let initLivePromise = null // 防止并发 initLive
 	let switchingChannel = false // 防止并发 switchChannel
+	let pageActive = true
+	let playbackRequestToken = 0
+	let resumeLiveOnShow = false
 
 	const currentChannelName = computed(() => {
 		return currentChannel.value?.displayName || currentChannel.value?.name || ''
@@ -212,36 +199,50 @@
 		
 		muted.value = getSetting('video_muted', true)
 		uni.$on('subUpdated', onSubUpdated)
-		// 公共监听器：mutedChanged 同步
-		usePageListeners({ mutedRef: muted })
 		initLive()
 	})
 
 	onShow(() => {
-		// 切回时如果已有播放源，恢复播放（onHide 时暂停了）
-		if (hasSource.value) {
-			nextTick(() => {
-				const ctx = createVideoContext()
-				if (ctx) ctx.play()
-			})
-		}
-		// 如果还没初始化或订阅已变更，重新加载
+		pageActive = true
 		if (!isInitialized) {
 			initLive()
+			return
+		}
+		if (resumeLiveOnShow && currentChannel.value) {
+			const channel = currentChannel.value
+			resumeLiveOnShow = false
+			nextTick(() => switchChannel(channel, true))
 		}
 	})
 
 	onHide(() => {
-		clearControlsTimer()
-		// 切走时暂停视频，节省流量和电量
-		const ctx = getVideoContext()
-		if (ctx) ctx.pause()
+		releaseLivePlayer(true)
 	})
 
 	onBeforeUnmount(() => {
 		uni.$off('subUpdated', onSubUpdated)
+		releaseLivePlayer(false)
 		clearControlsTimer()
 	})
+
+	function releaseLivePlayer(rememberChannel) {
+		resumeLiveOnShow = rememberChannel && !!currentChannel.value
+		pageActive = false
+		playbackRequestToken++
+		switchingChannel = false
+		clearControlsTimer()
+		try {
+			const ctx = getVideoContext() || createVideoContext()
+			if (isFullscreen.value && ctx) ctx.exitFullScreen()
+			if (ctx) ctx.stop()
+		} catch (e) {}
+		hasSource.value = false
+		videoUrl.value = ''
+		videoHeaders.value = {}
+		pendingUrl.value = ''
+		pendingHeaders.value = {}
+		videoKey.value++
+	}
 
 	/** 订阅源变更时重新加载 */
 	function onSubUpdated() {
@@ -345,21 +346,25 @@
 	// videoKey++ 会重建组件，旧 videoContext 失效，需在 nextTick 后重新创建
 	// 同步 header：uni-app <video> 的 header 属性（App 3.1.19+）直接注入 Referer/UA，比 LiveProxy 代理透传更可靠
 	function applyVideoUrl(url) {
+		if (!pageActive) return false
 		videoKey.value++
 		videoUrl.value = url
 		videoHeaders.value = pendingHeaders.value || {}
 		hasSource.value = true
+		showPlayerControls.value = true
+		setControlsTimer(() => { showPlayerControls.value = false }, 2500)
 		
 		nextTick(() => {
 			const ctx = createVideoContext()
 			
 			if (ctx) ctx.play()
 		})
+		return true
 	}
 
 	// ===== 频道切换 =====
-	  async function switchChannel(ch) {
-	   if (!ch || !ch.name) return
+	  async function switchChannel(ch, force = false) {
+	   if (!pageActive || !ch || !ch.name) return
 	   // 防止并发调用
 	   if (switchingChannel) {
 	    
@@ -369,7 +374,7 @@
 	   
 
 	   // 同频道且已有播放源时跳过
-	   if (ch.name === currentChannel.value?.name && (hasSource.value || pendingUrl.value)) {
+	   if (!force && ch.name === currentChannel.value?.name && (hasSource.value || pendingUrl.value)) {
 	    
 	    return
 	   }
@@ -384,8 +389,10 @@
 	   loading.value = true
 	   errorMsg.value = ''
 	   switchingChannel = true
+	   const requestToken = ++playbackRequestToken
 	   try {
 	         const result = await liveGetUrl(ch.displayName, ch._group || currentGroup.value || '', currentLine.value)
+	         if (!pageActive || requestToken !== playbackRequestToken) return
 
 	         if (result && result.url) {
 	     // 对齐 fongmi 原版：切频道即播，不要求用户再点播放器
@@ -399,11 +406,14 @@
 	     errorMsg.value = '未获取到播放地址'
 	    }
 	   } catch (e) {
-	    
-	    errorMsg.value = e.message || '获取播放地址失败'
+	    if (pageActive && requestToken === playbackRequestToken) {
+	     errorMsg.value = e.message || '获取播放地址失败'
+	    }
 	   } finally {
-	    loading.value = false
-	    switchingChannel = false
+	    if (requestToken === playbackRequestToken) {
+	     loading.value = false
+	     switchingChannel = false
+	    }
 	   }
 	  }
 
@@ -433,6 +443,7 @@
 	  }
 
 	async function switchLine(ch, delta = 1) {
+		if (!pageActive) return
 		const target = ch || currentChannel.value
 		if (!target || !target.urls || target.urls.length <= 1) return
 		const line = ((target.currentLine || 0) + delta + target.urls.length) % target.urls.length
@@ -444,9 +455,11 @@
 			pendingUrl.value = ''
 			loading.value = true
 			errorMsg.value = ''
+			const requestToken = ++playbackRequestToken
 			try {
 				const result = await liveGetUrl(target.displayName, target._group || currentGroup.value || '',
 					'', line)
+				if (!pageActive || requestToken !== playbackRequestToken) return
 				if (result && result.url) {
 					const h = Object.assign({}, result.header || {})
 					if (!h['User-Agent'] && !h['user-agent']) h['User-Agent'] = 'okhttp/4.12.0'
@@ -457,15 +470,16 @@
 					errorMsg.value = '未获取到播放地址'
 				}
 			} catch (e) {
-				errorMsg.value = e.message || '换源失败'
+				if (pageActive && requestToken === playbackRequestToken) errorMsg.value = e.message || '换源失败'
 			} finally {
-				loading.value = false
+				if (requestToken === playbackRequestToken) loading.value = false
 			}
 		}
 	}
 
 	// 自动尝试切下一线路（存储为待播放，不自动播放）
 	async function tryAutoSwitchLine() {
+		if (!pageActive) return
 		if (currentChannel.value && lineCount.value > 1) {
 			const nextLine = (currentLine.value + 1) % lineCount.value
 			if (nextLine !== currentLine.value) {
@@ -475,9 +489,11 @@
 				videoUrl.value = ''
 				pendingUrl.value = ''
 				errorMsg.value = '正在尝试下一线路...'
+				const requestToken = ++playbackRequestToken
 				try {
 					const result = await liveGetUrl(currentChannel.value.displayName,
 						currentChannel.value._group || currentGroup.value || '', nextLine)
+					if (!pageActive || requestToken !== playbackRequestToken) return
 					if (result && result.url) {
 						const h = Object.assign({}, result.header || {})
 						if (!h['User-Agent'] && !h['user-agent']) h['User-Agent'] = 'okhttp/4.12.0'
@@ -489,7 +505,7 @@
 						errorMsg.value = '未获取到播放地址'
 					}
 				} catch {
-					errorMsg.value = '所有线路均不可用'
+					if (pageActive && requestToken === playbackRequestToken) errorMsg.value = '所有线路均不可用'
 				}
 			}
 		}
@@ -510,26 +526,32 @@
 
 	// ===== 全屏控制 =====
 	function onPlayerTap() {
-		
 		// 有待播放的直播流 → 触发放映
 		if (pendingUrl.value) {
 			applyVideoUrl(pendingUrl.value)
 			pendingUrl.value = ''
 			return
 		}
-		if (!hasSource.value) return
-		if (!isFullscreen.value) {
-			enterFullscreen()
+		if (!hasSource.value || isFullscreen.value) return
+		showPlayerControls.value = !showPlayerControls.value
+		if (showPlayerControls.value) {
+			setControlsTimer(() => { showPlayerControls.value = false }, 4000)
 		} else {
-			toggleFSControls()
+			clearControlsTimer()
 		}
+	}
+
+	function onMuteTap() {
+		toggleMute()
+		showPlayerControls.value = true
+		setControlsTimer(() => { showPlayerControls.value = false }, 4000)
 	}
 
 	function enterFullscreen() {
 		nextTick(() => {
 			const ctx = getVideoContext() || createVideoContext()
 			ctx.requestFullScreen({
-				direction: 0 // 自动横屏
+				direction: 90
 			})
 		})
 	}
@@ -623,6 +645,12 @@
 	}
 
 	/* ===== 播放器区域 ===== */
+	.player-status-bar {
+		width: 100%;
+		flex-shrink: 0;
+		background: #000;
+	}
+
 	.player-area {
 		position: relative;
 		width: 100%;
@@ -895,6 +923,17 @@
 		color: #fe8027;
 	}
 
+	/* 透明点击捕获层必须常驻，否则 video 原生控制层会吞掉 tap。 */
+	.player-tap-layer {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		z-index: 14;
+		background-color: rgba(0, 0, 0, 0.01);
+	}
+
 	/* ===== 非全屏底部控制条 ===== */
 	.player-controls-bar {
 		position: absolute;
@@ -908,21 +947,24 @@
 	}
 
 	.ctrl-btn {
-		display: inline-block;
-		width: 80rpx;
+		position: absolute;
+		bottom: 0;
+		z-index: 16;
+		min-width: 80rpx;
 		height: 80rpx;
 		line-height: 80rpx;
+		padding: 0 20rpx;
 		text-align: center;
+		font-size: 24rpx;
+		color: #fff;
 	}
 
 	.ctrl-btn.left {
-		float: left;
-		margin-left: 20rpx;
+		left: 20rpx;
 	}
 
 	.ctrl-btn.right {
-		float: right;
-		margin-right: 20rpx;
+		right: 20rpx;
 	}
 
 	.ctrl-icon {

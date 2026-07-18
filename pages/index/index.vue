@@ -58,6 +58,7 @@
 </template>
 
 <script setup>
+	import { useTabBack } from '@/utils/useTabBack.js'
 	import {
 	  ref,
 	  computed,
@@ -93,6 +94,8 @@
 	 useStatusBar
 	} from '@/utils/useStatusBar.js'
 
+	useTabBack({ home: true })
+
 	const {
 		statusBarHeight
 	} = useStatusBar()
@@ -108,10 +111,15 @@
 	const gridTemplateCols = computed(() => `repeat(${gridCols.value}, 1fr)`)
 	// 格式化角标：去除"评分"前缀和尾部标点，只保留数值，0不展示（复刻 vod-grid formatBadge）
 	function formatBadge(text) {
-		if (!text || text === '0') return ''
-		const cleaned = text.replace(/^评分|[，,。、；;：""''「」【】《》（）!！?？\s]+$/g, '')
-		if (cleaned === '0') return ''
-		return cleaned
+		if (text == null) return ''
+		const raw = String(text).trim()
+		if (!raw || raw === '0') return ''
+		if (raw.includes('评分')) {
+			const match = raw.match(/评分\D*([0-9]+(?:\.[0-9]+)?)/)
+			if (!match || Number(match[1]) === 0) return ''
+			return match[1]
+		}
+		return raw.replace(/[，,。、；;：:"'「」【】《》（）!！?？\s]+$/g, '')
 	}
 	// 如果 store 已有缓存数据（如已订阅），直接显示，不等待网络请求阻塞页面
 	const loading = ref(store.homeList.length === 0)
@@ -136,20 +144,24 @@
 	// watch 移除：store.classes / store.homeList 的同步已由 loadHome / subUpdated / appReady
 	// 等事件处理器手动赋值完成，watch 与之重复且不必要的。
 
+	const handleGridColsChanged = (val) => {
+		if (val != null) gridCols.value = Number(val) || 3
+	}
+
 	onMounted(async () => {
 		initPage()
-		// 监听列数变更（来自「我的」页面）
-		uni.$on('gridColsChanged', (val) => {
-			if (val != null) gridCols.value = val
-		})
+		// 同时响应本地修改和登录后的云端偏好加载。
+		uni.$on('gridColsChanged', handleGridColsChanged)
 	})
 
 	onUnmounted(() => {
-		uni.$off('gridColsChanged')
+		uni.$off('gridColsChanged', handleGridColsChanged)
 	})
 
 	// 从 mine 页切回时，store 可能已有新数据
 	onShow(() => {
+		// tab 页常驻时也重新读取一次，覆盖登录发生在其他页面的情况。
+		gridCols.value = Number(getSetting('grid_cols', 3)) || 3
 		if (!isInitialized) {
 			initPage()
 		} else if (store.homeList.length > 0 && list.value.length === 0) {

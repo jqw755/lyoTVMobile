@@ -9,3 +9,6 @@ $theme-accent: #fe8027;
  * 导致 page{...} 变成 page[data-v-xxx] 永不匹配，变量无法生效。
  * SCSS 变量（$var）不受影响，仍可在此定义。
  */
+.page {
+	font-size: var(--text-base);
+}

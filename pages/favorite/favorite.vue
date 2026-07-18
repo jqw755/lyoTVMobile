@@ -43,34 +43,34 @@
 			  <view class="section-header">
 			   <text class="section-title">{{ section.key }}</text>
 			  </view>
-			  <vod-grid :items="section.items" @itemTap="goDetail">
-			   <template #overlay="{ item }">
-			    <view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
-			     <uni-icons type="closeempty" size="16" color="#fff" />
+			  <!-- App 端 Options API 子组件接收 ref 数组会失去响应式，直接在页面内渲染。 -->
+			  <view class="grid-wrapper">
+			   <view class="grid" :style="{ gridTemplateColumns: gridTemplateCols, gap: '20rpx' }">
+			    <view
+			     v-for="(item, itemIndex) in section.items"
+			     :key="item.vod_id || (item.fav_time || si) + '-' + itemIndex"
+			     class="grid-item"
+			     @tap="goDetail(item)"
+			    >
+			     <view class="grid-card">
+			      <view class="grid-poster-wrap">
+			       <image class="grid-poster" :src="item.vod_pic" mode="aspectFill" lazy-load />
+			       <text v-if="formatBadge(item.vod_remarks)" class="grid-badge">{{ formatBadge(item.vod_remarks) }}</text>
+			       <view v-if="isEditing" class="grid-remove" @tap.stop="onRemove(item)">
+			        <uni-icons type="closeempty" size="16" color="#fff" />
+			       </view>
+			      </view>
+			      <view class="grid-info">
+			       <text class="grid-title">{{ item.vod_name || '未知影片' }}</text>
+			      </view>
+			     </view>
 			    </view>
-			   </template>
-			  </vod-grid>
+			   </view>
+			  </view>
 			 </view>
 				<uni-load-more :status="loadMoreStatus" />
 			</scroll-view>
 
-		<!-- ===== 调试面板（定位"云端有数据本地拉不下来"）===== -->
-		<view class="debug-panel">
-			<view class="debug-header">
-				<text class="debug-title">收藏调试日志</text>
-				<view class="debug-actions">
-					<text class="debug-action" @tap="copyDebugLogs">复制</text>
-					<text class="debug-action" @tap="clearDebugLogs">清空</text>
-				</view>
-			</view>
-			<scroll-view scroll-y class="debug-scroll">
-				<text v-for="(line, i) in debugLogs" :key="i" class="debug-line">{{ line.text }}</text>
-				<text v-if="debugLogs.length === 0" class="debug-line">（无日志，等 onShow 触发）</text>
-			</scroll-view>
-			<view class="debug-state">
-				<text>loggedIn: {{ loggedIn }} | list.length: {{ list.length }} | loading: {{ loading }} | hasMore: {{ hasMore }}</text>
-			</view>
-		</view>
 	</view>
 </template>
 
@@ -90,18 +90,14 @@
 		getFavoritesPaginated,
 		removeFavorite,
 		addHistory,
+		getSetting,
 		getCurrentUser,
 		clearFavorites,
 	} from '@/utils/store.js'
 	import {
 	   useStatusBar
 	  } from '@/utils/useStatusBar.js'
-	  import {
-	   debugLog,
-	   debugLogs,
-	   clearDebugLogs,
-	   copyDebugLogs
-	  } from '@/utils/debugLogger.js'
+	  import { debugLog } from '@/utils/debugLogger.js'
 
 	const {
 		statusBarHeight
@@ -110,61 +106,50 @@
 	const PAGE_SIZE = 20
 
 	const list = ref([])
+	const gridCols = ref(getSetting('grid_cols', 3))
+	const gridTemplateCols = computed(() => 'repeat(' + gridCols.value + ', 1fr)')
 	const loading = ref(false)
 	const loggedIn = ref(false)
 	const page = ref(1)
 	const hasMore = ref(true)
 	const isEditing = ref(false)
 
+	function formatBadge(text) {
+		if (!text || text === '0') return ''
+		const cleaned = String(text).replace(/^评分|[，,。、；;：""''「」【】《》（）!！?？\s]+$/g, '')
+		return cleaned === '0' ? '' : cleaned
+	}
+
 	  // ===== 调试使用全局 debugLog（见 App.vue 浮动按钮） =====
 	  // 直接用 debugLog('FAV', ...) 代替 debugLog('FAV',)
 
 	function groupByTime(items, timeField = 'fav_time') {
-		const now = new Date()
-		const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-		const yesterdayStart = todayStart - 86400000
-		const dayOfWeek = now.getDay()
-		const daysSinceMonday = (dayOfWeek + 6) % 7
-		const mondayStart = todayStart - daysSinceMonday * 86400000
-		const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
-
-		const groups = [{
-				key: '今天',
-				items: []
-			},
-			{
-				key: '昨天',
-				items: []
-			},
-			{
-				key: '本周',
-				items: []
-			},
-			{
-				key: '本月',
-				items: []
-			},
-			{
-				key: '更早',
-				items: []
-			},
-		]
+		const groups = []
+		const map = Object.create(null)
 
 		for (const item of items) {
-			const t = item[timeField] || 0
-			if (t >= todayStart) {
-				groups[0].items.push(item)
-			} else if (t >= yesterdayStart) {
-				groups[1].items.push(item)
-			} else if (t >= mondayStart) {
-				groups[2].items.push(item)
-			} else if (t >= monthStart) {
-				groups[3].items.push(item)
-			} else {
-				groups[4].items.push(item)
+			const timestamp = Number(item[timeField] || 0)
+			if (!timestamp) continue
+			const date = new Date(timestamp)
+			if (Number.isNaN(date.getTime())) continue
+			const dateKey = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+			if (!map[dateKey]) {
+				map[dateKey] = []
+				groups.push({
+					key: `${date.getFullYear()}年${pad(date.getMonth() + 1)}月${pad(date.getDate())}日`,
+					timestamp: new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime(),
+					items: map[dateKey]
+				})
 			}
+			map[dateKey].push(item)
 		}
-		return groups.filter(g => g.items.length > 0)
+
+		groups.sort((a, b) => b.timestamp - a.timestamp)
+		return groups
+	}
+
+	function pad(n) {
+		return n < 10 ? '0' + n : '' + n
 	}
 
 	const visibleSections = computed(() => {
@@ -183,6 +168,7 @@
 	})
 
 	async function load() {
+		gridCols.value = getSetting('grid_cols', 3)
 		debugLog('FAV','load() 开始, getCurrentUser=', getCurrentUser())
 		loggedIn.value = !!getCurrentUser()
 		debugLog('FAV','loggedIn=', loggedIn.value)
@@ -277,6 +263,10 @@
 
 	function goDetail(item) {
 		if (isEditing.value) return
+		if (!item?.vod_id) {
+			uni.showToast({ title: '该收藏缺少影片 ID', icon: 'none' })
+			return
+		}
 		addHistory(item)
 		uni.navigateTo({
 			url: `/pages/detail/detail?id=${item.vod_id}&key=${item.site_key || ''}`
@@ -445,11 +435,58 @@
 		}
 	}
 
+	/* 内联网格：规避 uni-app App 端 vod-grid 的 ref prop 响应式断链。 */
+	.grid-wrapper {
+		max-width: 750rpx;
+		margin: 0 auto;
+		padding: 0 24rpx;
+	}
+
+	.grid {
+		display: grid;
+	}
+
+	.grid-item {
+		box-sizing: border-box;
+		min-width: 0;
+	}
+
+	.grid-card {
+		border-radius: 14rpx;
+		overflow: hidden;
+		background: var(--card);
+		box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.08);
+	}
+
+	.grid-poster-wrap {
+		position: relative;
+		width: 100%;
+	}
+
+	.grid-poster {
+		width: 100%;
+		height: 220rpx;
+		display: block;
+		background: var(--card-hover);
+	}
+
+	.grid-badge {
+		position: absolute;
+		top: 10rpx;
+		left: 10rpx;
+		background: rgba(254, 128, 39, 0.9);
+		color: #fff;
+		font-size: 18rpx;
+		padding: 2rpx 10rpx;
+		border-radius: 6rpx;
+		line-height: 1.4;
+	}
+
 	/* 编辑模式删除按钮 — 全圆灰底 */
 	.grid-remove {
 		position: absolute;
-		top: -12rpx;
-		right: -12rpx;
+		top: 8rpx;
+		right: 8rpx;
 		width: 44rpx;
 		height: 44rpx;
 		border-radius: 50%;
@@ -481,65 +518,4 @@
 		overflow: hidden;
 	}
 
-	/* ===== 调试面板 ===== */
-	.debug-panel {
-		position: fixed;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		z-index: 999;
-		background: rgba(0,0,0,0.92);
-		border-top: 2rpx solid #fe8027;
-		max-height: 360rpx;
-		display: flex;
-		flex-direction: column;
-	}
-	.debug-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 8rpx 16rpx;
-		background: rgba(254,128,39,0.15);
-	}
-	.debug-title {
-		font-size: 22rpx;
-		color: #fe8027;
-		font-weight: 600;
-	}
-	.debug-actions {
-		display: flex;
-		align-items: center;
-		gap: 12rpx;
-	}
-	.debug-action {
-		font-size: 20rpx;
-		color: #ccc;
-		padding: 4rpx 12rpx;
-		border-radius: 6rpx;
-		background: rgba(255,255,255,0.08);
-	}
-	.debug-action:active {
-		opacity: 0.6;
-	}
-	.debug-scroll {
-		flex: 1;
-		overflow-y: auto;
-		padding: 6rpx 12rpx;
-		max-height: 260rpx;
-	}
-	.debug-line {
-		display: block;
-		font-size: 18rpx;
-		color: #ccc;
-		line-height: 1.5;
-		font-family: monospace;
-		word-break: break-all;
-	}
-	.debug-state {
-		padding: 6rpx 12rpx;
-		background: rgba(255,255,255,0.05);
-		font-size: 18rpx;
-		color: #aaa;
-		font-family: monospace;
-	}
 </style>

@@ -45,8 +45,21 @@ export function useVideoPlayer(videoId) {
 	}
 
 	// ===== 倍速控制 =====
+	// 同时更新响应式属性和原生 VideoContext，兼容 App 端原生 video。
+	function applyPlaybackRate(s) {
+		const rate = Number(s)
+		if (!Number.isFinite(rate) || rate <= 0) return
+		playbackRate.value = rate
+		try {
+			const context = videoContext || createVideoContext()
+			if (context && typeof context.playbackRate === 'function') {
+				context.playbackRate(rate)
+			}
+		} catch (e) {}
+	}
+
 	function selectSpeed(s) {
-		playbackRate.value = s
+		applyPlaybackRate(s)
 		showSidebar.value = false
 		// 选中后短暂显示倍速按钮再自动隐藏
 		showSpeed.value = true
@@ -104,7 +117,7 @@ export function useVideoPlayer(videoId) {
 		// 方法
 		createVideoContext, getVideoContext,
 		setControlsTimer, clearControlsTimer,
-		selectSpeed, onSpeedBtnTap, closeSidebar,
+		applyPlaybackRate, selectSpeed, onSpeedBtnTap, closeSidebar,
 		showSpeedTemporarily, getDisplayRate,
 		onFullscreenChange, exitFullscreen, toggleMute,
 	}

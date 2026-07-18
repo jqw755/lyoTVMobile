@@ -1,13 +1,24 @@
 <template>
   <view class="page" :style="themeStyle">
-    <!-- 播放器 -->
+    <!-- 状态栏使用独立黑色占位，避免浅色主题露出白底。 -->
     <view
-      class="player-area"
-      @tap="onPlayerTap"
-      @longpress="onLongPress"
-      @touchend="onLongPressEnd"
-      @touchcancel="onLongPressEnd"
-    >
+      class="player-status-bar"
+      v-if="!isFullscreen"
+      :style="{ height: statusBarHeight + 'px' }"
+    ></view>
+    <!-- 倍速按钮放在原生 video 边界之外，确保点击和长按不会被视频层吞掉。 -->
+    <view class="speed-toolbar" v-if="!isFullscreen">
+      <view
+        class="speed-btn"
+        v-if="hasSource && showSpeedControl"
+        @tap.stop="onSpeedBtnTap"
+        @longpress.stop="onLongPress"
+        @touchend.stop="onLongPressEnd"
+        @touchcancel.stop="onLongPressEnd"
+      >{{ showLongPressHint ? `${longPressHintSpeed}x 快进中` : `${getDisplayRate()}x` }}</view>
+    </view>
+    <!-- 播放器 -->
+    <view class="player-area">
       <video
         id="detail-player"
         :key="videoKey"
@@ -27,19 +38,23 @@
         :http-cache="false"
         play-btn-position="center"
         :mobilenet-hint-type="1"
-        :rate="playbackRate"
+        :playback-rate="playbackRate"
+        :initial-time="resumePosition"
         style="width: 100%; height: 100%"
         @error="onVideoError"
-        @tap="onVideoTap"
+        @timeupdate="onVideoTimeUpdate"
+        @pause="savePlaybackProgress(true)"
         @fullscreenchange="onFullscreenChange"
-      />
+        @play="onVideoPlay"
+        @controlstoggle="onVideoControlsToggle"
+        @longpress="onLongPress"
+        @touchend="onLongPressEnd"
+        @touchcancel="onLongPressEnd"
+      >
+      </video>
+      <!-- 原生 video 区域不再覆盖任何触摸层，保留原生全屏、暂停和进度手势。 -->
 
       <!-- 顶部自定义栏（轻触显示） -->
-      <cover-view class="top-bar" v-if="hasSource && showControls">
-        <cover-view class="top-bar-back" @tap="onBackTap">
-          <uni-icons type="left" size="20" color="#fff" />
-        </cover-view>
-      </cover-view>
 
       <!-- 加载覆盖层（vod 数据到之前显示，不阻塞页面框架） -->
       <view class="player-overlay" v-if="loading && !vod"> </view>
@@ -52,42 +67,8 @@
       </view>
 
       <!-- 右侧悬浮倍速按钮 -->
-      <cover-view
-        class="speed-btn"
-        v-if="hasSource && showControls && !showSidebar"
-        @tap="onSpeedBtnTap"
-      >
-        <cover-view class="speed-circle-txt">{{ getDisplayRate() }}</cover-view>
-      </cover-view>
-      <!-- 侧边栏遮罩 -->
-      <cover-view
-        class="speed-mask"
-        v-if="hasSource && showSidebar"
-        @tap="onCloseSidebar"
-      />
-      <!-- 倍速侧边栏 -->
-      <cover-view
-        class="speed-sidebar"
-        v-if="hasSource && showSidebar"
-      >
-        <cover-view class="sidebar-title">倍速</cover-view>
-        <cover-view
-          class="sidebar-opt"
-          v-for="s in speedOptions"
-          :key="s"
-          :class="{ active: playbackRate === s }"
-          @tap="onSelectSpeed(s)"
-        >
-          <cover-view class="sidebar-opt-txt">{{ s }}x</cover-view>
-        </cover-view>
-      </cover-view>
 
       <!-- 长按倍速提示 -->
-      <cover-view class="speed-hint" v-if="showLongPressHint">
-        <cover-view class="speed-hint-text"
-          >{{ longPressHintSpeed }}倍加速中</cover-view
-        >
-      </cover-view>
 
       <!-- 视频加载错误 / 自动换源提示 -->
       <view
@@ -137,10 +118,12 @@
         </view>
         <!-- 站源 -->
         <view class="source-row" v-if="flags.length > 0">
-          <uni-icons type="flag" size="14" color="#888" /><text
-            class="source-label"
-            >站源</text
-          >
+			<view class="zy-row">
+				<uni-icons type="flag" size="16" color="#888" /><text
+				  class="source-label"
+				  >站源</text
+				>
+			</view>
           <scroll-view class="source-tabs" scroll-x show-scrollbar="false">
             <text
               v-for="f in flags"
@@ -197,7 +180,7 @@
             class="ep ep-more"
             @tap="showAll = true"
             >展开 {{ currentEpisodes.length - COLLAPSE_LIMIT }} 集
-            <uni-icons type="arrowdown" size="12" color="#fe8027"
+            <uni-icons type="down" size="14" color="#fe8027"
           /></text>
         </view>
       </view>
@@ -224,10 +207,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { themeStyle } from "@/utils/theme.js";
 import { usePageListeners } from "@/utils/usePageListeners.js";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onShow, onHide } from "@dcloudio/uni-app";
 import { detail, player, searchSite } from "@/utils/api.js";
 import {
   addFavorite,
@@ -241,6 +224,9 @@ import {
 
 import { store } from "@/utils/appState.js";
 import { useVideoPlayer } from "@/utils/useVideoPlayer.js";
+import { useStatusBar } from "@/utils/useStatusBar.js";
+
+const { statusBarHeight } = useStatusBar();
 
 const COLLAPSE_LIMIT = 30;
 
@@ -260,12 +246,23 @@ const videoUrl = ref("");
 const autoPlay = ref(false);
 const savedEpisode = ref("");
 const savedProgress = ref(0);
+const savedFlag = ref("");
+const resumePosition = ref(0);
+let currentPlaybackPosition = 0;
+let lastProgressSavedAt = 0;
+let resumeSeekApplied = true;
 const videoErrorMsg = ref("");
 const switchingSource = ref(false);
 const failedSiteKeys = ref(new Set());
 const showLongPressHint = ref(false);
- const longPressHintSpeed = ref(2);
- const showControls = ref(false);
+const longPressHintSpeed = ref(2);
+const showControls = ref(false);
+const showSpeedControl = ref(false);
+let longPressActive = false;
+let speedBeforeLongPress = 1;
+let suppressSpeedTapUntil = 0;
+let speedControlTimer = null;
+let nativeControlsVisible = false;
 
 // ===== 播放器共享状态（useVideoPlayer） =====
 const {
@@ -279,14 +276,16 @@ const {
   createVideoContext,
   setControlsTimer,
   clearControlsTimer,
+  applyPlaybackRate,
   selectSpeed,
-  onSpeedBtnTap,
   closeSidebar,
   showSpeedTemporarily,
   getDisplayRate,
   onFullscreenChange,
   exitFullscreen,
 } = useVideoPlayer("detail-player");
+
+usePageListeners({ mutedRef: muted });
 
 const COLLAPSE_LENGTH = 120;
 const displayContent = computed(() => {
@@ -302,6 +301,9 @@ const isContentLong = computed(() => {
 // 倍速/全屏/定时器由 useVideoPlayer composable 提供
 let pageId = "";
 let pageKey = "";
+let pageActive = true;
+let playbackRequestToken = 0;
+let resumeAfterHide = false;
 
 const currentEpisodes = computed(() => {
   const f = flags.value.find((f) => f.flag === activeFlag.value);
@@ -318,23 +320,57 @@ onLoad((o) => {
   pageKey = o?.key || "";
 });
 onMounted(() => {
-  ;
   loadDetail();
   muted.value = getSetting("video_muted", true);
-  // 公共监听器：mutedChanged 同步
-  usePageListeners({ mutedRef: muted });
 });
+
+onShow(() => {
+  pageActive = true;
+  if (!resumeAfterHide || !vod.value) return;
+  resumeAfterHide = false;
+  const ep = currentEpisodes.value[currentIndex.value];
+  if (!ep) return;
+  savedEpisode.value = ep.name;
+  savedProgress.value = Math.max(0, currentPlaybackPosition || 0);
+  savedFlag.value = activeFlag.value;
+  nextTick(() => playEpisode(currentIndex.value, true));
+});
+
+onHide(() => {
+  onLongPressEnd();
+  clearSpeedControlTimer();
+  showSpeedControl.value = false;
+  releaseDetailPlayer(true);
+});
+
 onBeforeUnmount(() => {
+  onLongPressEnd();
+  clearSpeedControlTimer();
+  savePlaybackProgress(true);
+  releaseDetailPlayer(false);
   clearControlsTimer();
-  // 先清 hasSource：避免 ctx.stop() 触发 <video> src='' 的 @error 误判为播放失败
+});
+
+function releaseDetailPlayer(rememberPosition) {
+  if (rememberPosition && vod.value && currentEpisodes.value.length > 0) {
+    savePlaybackProgress(true);
+    resumeAfterHide = true;
+  } else if (!rememberPosition) {
+    resumeAfterHide = false;
+  }
+
+  pageActive = false;
+  playbackRequestToken++;
   hasSource.value = false;
   autoPlay.value = false;
-  // 离开详情页时停止视频播放，节省流量
   try {
     const ctx = createVideoContext();
+    if (isFullscreen.value && ctx) ctx.exitFullScreen();
     if (ctx) ctx.stop();
   } catch (e) {}
-});
+  videoUrl.value = "";
+  videoKey.value++;
+}
 
 async function loadDetail() {
   if (!pageId) return;
@@ -365,22 +401,38 @@ async function loadDetail() {
       .then((v) => (isFaved.value = v))
       .catch(() => {});
 
-    // 播放进度（从本地历史缓存恢复，同步无网络）
+    // 恢复历史线路、集数和播放秒数。旧记录没有 flag 时，按集名反查所在线路。
     const localHist = getHistory();
-    const found = localHist.find((h) => h.vod_id === item.vod_id);
+    const found = localHist.find((h) =>
+      h.vod_id === item.vod_id &&
+      (!pageKey || !h.site_key || h.site_key === pageKey)
+    );
+    let shouldResume = false;
     if (found) {
       savedEpisode.value = found.episode || "";
-      savedProgress.value = found.progress || 0;
+      savedProgress.value = Math.max(0, Number(found.progress) || 0);
+      savedFlag.value = found.flag || "";
+
+      const targetFlag =
+        flags.value.find((f) => f.flag === savedFlag.value) ||
+        flags.value.find((f) =>
+          (f.episodes || []).some((ep) => ep.name === savedEpisode.value)
+        );
+      if (targetFlag) activeFlag.value = targetFlag.flag;
+
       if (savedEpisode.value && currentEpisodes.value.length > 0) {
         const idx = currentEpisodes.value.findIndex(
           (ep) => ep.name === savedEpisode.value,
         );
-        if (idx >= 0) currentIndex.value = idx;
+        if (idx >= 0) {
+          currentIndex.value = idx;
+          shouldResume = true;
+        }
       }
     }
-    // 自动播放第一集（或历史进度）
+    // 自动播放第一集，或从历史中的线路、集数和秒数继续播放。
     if (currentEpisodes.value.length > 0) {
-      playEpisode(currentIndex.value);
+      playEpisode(currentIndex.value, shouldResume);
     }
   } catch (e) {
     error.value = true;
@@ -413,11 +465,16 @@ function extractUrl(u) {
 }
 
 function switchFlag(f) {
+  savePlaybackProgress(true);
   activeFlag.value = f;
   currentIndex.value = 0;
   showAll.value = false;
   savedEpisode.value = "";
   savedProgress.value = 0;
+  savedFlag.value = "";
+  resumePosition.value = 0;
+  currentPlaybackPosition = 0;
+  resumeSeekApplied = true;
   if (hasSource.value) {
     hasSource.value = false;
     autoPlay.value = false;
@@ -426,27 +483,39 @@ function switchFlag(f) {
 }
 
 function onVideoTap() {
-  // 用户点击了 video（含 poster 上的播放按钮），触发加载真实地址
+  // App 端原生 video 的 tap 不会冒泡到外层 view，必须在这里切换自定义栏。
   if (!hasSource.value && currentEpisodes.value.length > 0) {
     playEpisode(currentIndex.value);
+    return;
   }
+  onPlayerTap();
 }
 
-function playEpisode(index) {
-  ;
+function playEpisode(index, resumeHistory = false) {
+  if (hasSource.value) savePlaybackProgress(true);
   const ep = currentEpisodes.value[index];
   if (!ep) return;
   currentIndex.value = index;
   showAll.value = true;
-  addHistory(vod.value, ep.name, 0);
+
+  const canResume = resumeHistory && savedEpisode.value === ep.name;
+  resumePosition.value = canResume ? savedProgress.value : 0;
+  currentPlaybackPosition = resumePosition.value;
+  resumeSeekApplied = resumePosition.value <= 1;
+  lastProgressSavedAt = 0;
+  addHistory(vod.value, ep.name, resumePosition.value, activeFlag.value);
+
   videoErrorMsg.value = "";
   switchingSource.value = false;
   loadVideoSource(activeFlag.value, ep);
 }
 
 function loadVideoSource(flag, ep, isFallback) {
+  if (!pageActive) return;
+  const requestToken = ++playbackRequestToken;
   player(flag, ep.url, pageKey)
     .then((data) => {
+      if (!pageActive || requestToken !== playbackRequestToken) return;
       const url = extractUrl(data.url) || ep.url || "";
       if (!url) {
         fallbackToNextLine(flag, ep, "未获取到播放地址");
@@ -456,6 +525,8 @@ function loadVideoSource(flag, ep, isFallback) {
       videoUrl.value = url;
       hasSource.value = true;
       autoPlay.value = true;
+      showControls.value = true;
+      setControlsTimer(() => { showControls.value = false }, 2500);
       switchingSource.value = false;
       videoErrorMsg.value = "";
       if (isFallback) {
@@ -467,6 +538,7 @@ function loadVideoSource(flag, ep, isFallback) {
       if (isFullscreen.value) showSpeedTemporarily();
     })
     .catch((e) => {
+      if (!pageActive || requestToken !== playbackRequestToken) return;
       fallbackToNextLine(flag, ep, e?.message || "播放接口异常");
     });
 }
@@ -582,6 +654,39 @@ function allFailed(reason) {
   });
 }
 
+function onVideoTimeUpdate(e) {
+  const reported = Number(e?.detail?.currentTime);
+  if (!Number.isFinite(reported) || reported < 0) return;
+
+  // initial-time 在部分 App 端播放器内核上不稳定，首次 timeupdate 再 seek 一次兜底。
+  if (!resumeSeekApplied && resumePosition.value > 1) {
+    const target = resumePosition.value;
+    resumeSeekApplied = true;
+    currentPlaybackPosition = target;
+    if (Math.abs(reported - target) > 2) {
+      try {
+        const ctx = createVideoContext();
+        if (ctx) ctx.seek(target);
+      } catch (e) {}
+      return;
+    }
+  }
+
+  currentPlaybackPosition = reported;
+  savePlaybackProgress(false);
+}
+
+function savePlaybackProgress(force = false) {
+  if (!vod.value || !hasSource.value) return;
+  const ep = currentEpisodes.value[currentIndex.value];
+  if (!ep) return;
+
+  const now = Date.now();
+  if (!force && now - lastProgressSavedAt < 5000) return;
+  lastProgressSavedAt = now;
+  const progress = Math.max(0, Math.floor(currentPlaybackPosition || 0));
+  addHistory(vod.value, ep.name, progress, activeFlag.value);
+}
 function onVideoError() {
   // video 组件在 src 为空时也会触发 @error，此时没有加载任何源，忽略
   if (!hasSource.value) return;
@@ -597,8 +702,7 @@ function onVideoError() {
 }
 
 function setSpeed(s) {
-  playbackRate.value = s;
-  showSidebar.value = false;
+  selectSpeed(s);
   if (isFullscreen.value) showSpeedTemporarily();
 }
 
@@ -626,14 +730,49 @@ function onPlayerTap() {
    }
  }
 
- function onCloseSidebar() {
-   closeSidebar();
-   showControls.value = true;
-   setControlsTimer(() => { showControls.value = false }, 4000);
- }
+function clearSpeedControlTimer() {
+  if (!speedControlTimer) return;
+  clearTimeout(speedControlTimer);
+  speedControlTimer = null;
+}
 
- function onSelectSpeed(s) {
-   selectSpeed(s);
+function showSpeedControlTemporarily() {
+  showSpeedControl.value = true;
+  clearSpeedControlTimer();
+  if (nativeControlsVisible || longPressActive) return;
+  speedControlTimer = setTimeout(() => {
+    speedControlTimer = null;
+    showSpeedControl.value = false;
+  }, 4000);
+}
+
+function onVideoPlay() {
+  showSpeedControlTemporarily();
+}
+
+function onVideoControlsToggle(event) {
+  nativeControlsVisible = Boolean(event?.detail?.show);
+  clearSpeedControlTimer();
+  showSpeedControl.value = nativeControlsVisible;
+}
+
+function onSpeedBtnTap() {
+  // 长按松手后部分 WebView 还会补发 tap，避免误弹选择框。
+  if (longPressActive || Date.now() < suppressSpeedTapUntil) return;
+  clearSpeedControlTimer();
+  showSpeedControl.value = true;
+  uni.showActionSheet({
+    itemList: speedOptions.map((s) => `${s}x`),
+    success: ({ tapIndex }) => {
+      const speed = speedOptions[tapIndex];
+      if (speed != null) setSpeed(speed);
+    },
+    complete: () => showSpeedControlTemporarily(),
+  });
+}
+
+ function toggleMuteControl() {
+   muted.value = !muted.value;
    showControls.value = true;
    setControlsTimer(() => { showControls.value = false }, 4000);
  }
@@ -646,16 +785,33 @@ function onPlayerTap() {
    }
  }
 
+ function enterFullscreen() {
+   const ctx = createVideoContext();
+   if (ctx) ctx.requestFullScreen({ direction: 90 });
+ }
+
 function onLongPress() {
-  if (!hasSource.value) return;
-  const speed = getSetting("long_press_speed", 2);
-  playbackRate.value = speed;
+  if (!hasSource.value || longPressActive) return;
+  const configuredSpeed = Number(getSetting("long_press_speed", 2));
+  const speed = Number.isFinite(configuredSpeed) && configuredSpeed > 0
+    ? configuredSpeed
+    : 2;
+  speedBeforeLongPress = Number(playbackRate.value) || 1;
+  longPressActive = true;
+  clearSpeedControlTimer();
+  showSpeedControl.value = true;
   longPressHintSpeed.value = speed;
   showLongPressHint.value = true;
+  applyPlaybackRate(speed);
 }
 
 function onLongPressEnd() {
+  if (!longPressActive) return;
+  longPressActive = false;
   showLongPressHint.value = false;
+  applyPlaybackRate(speedBeforeLongPress);
+  suppressSpeedTapUntil = Date.now() + 500;
+  showSpeedControlTemporarily();
 }
 
 async function toggleFav() {
@@ -793,6 +949,17 @@ function stripHtml(html) {
   overflow: hidden;
 }
 
+/* 透明点击捕获层必须常驻，否则 video 原生控制层会吞掉 tap。 */
+.player-tap-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 18;
+  background-color: rgba(0, 0, 0, 0.01);
+}
+
 /* 顶部自定义栏 */
 .top-bar {
   position: absolute;
@@ -808,27 +975,81 @@ function stripHtml(html) {
 }
 
 .top-bar-back {
+  position: absolute;
+  left: 12rpx;
+  top: 0;
+  z-index: 22;
   width: 60rpx;
   height: 60rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  line-height: 56rpx;
+  text-align: center;
+  font-size: 52rpx;
+  color: #fff;
 }
 
-/* 右侧悬浮倍速按钮 */
-.speed-btn {
+.mute-btn {
+  position: absolute;
+  left: 24rpx;
+  bottom: 20rpx;
+  z-index: 22;
+  min-width: 88rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  padding: 0 16rpx;
+  border-radius: 28rpx;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 24rpx;
+  text-align: center;
+}
+
+.fullscreen-btn {
   position: absolute;
   right: 24rpx;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 20;
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
+  bottom: 20rpx;
+  z-index: 22;
+  min-width: 88rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  padding: 0 16rpx;
+  border-radius: 28rpx;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 24rpx;
+  text-align: center;
+}
+
+.player-status-bar {
+  width: 100%;
+  flex-shrink: 0;
+  background: #000;
+}
+
+/* 独立于原生 video 的倍速工具条，避免触摸事件被原生层吞掉。 */
+.speed-toolbar {
+  width: 100%;
+  height: 72rpx;
+  padding: 0 20rpx;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  background: #000;
+}
+
+.speed-btn {
+  min-width: 88rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  padding: 0 18rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.28);
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 600;
+  text-align: center;
 }
 
 /* 视频错误/换源提示 */
@@ -870,9 +1091,14 @@ function stripHtml(html) {
   top: 24rpx;
   transform: translateX(-50%);
   z-index: 25;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-width: 160rpx;
+  padding: 14rpx 24rpx;
+  border-radius: 28rpx;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: 600;
+  text-align: center;
   pointer-events: none;
 }
 
@@ -990,10 +1216,15 @@ function stripHtml(html) {
   margin-top: 20rpx;
   padding: 16rpx 0 0;
   border-top: 1rpx solid var(--border);
+  font-size: var(--text-base);
+  .zy-row{
+	  display: flex;
+	  gap: 12rpx;
+  }
 }
 
 .source-label {
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--text-secondary);
   flex-shrink: 0;
 }
@@ -1020,24 +1251,19 @@ function stripHtml(html) {
   }
 }
 
-.actor-section {
-  padding: 0 20rpx;
-  margin-top: 24rpx;
-}
-
 .section {
-  padding: 0 20rpx;
+  padding: 0 10rpx;
   margin-top: 24rpx;
 
   &-header {
     display: flex;
     align-items: center;
-    margin-bottom: 16rpx;
+    margin-bottom: 14rpx;
     gap: 12rpx;
   }
 
   &-title {
-	font-size: var(--text-sm);
+	font-size: var(--text-base);
     font-weight: var(--weight-semibold);
     color: var(--text-primary);
   }
@@ -1051,14 +1277,14 @@ function stripHtml(html) {
 .episodes {
   display: flex;
   flex-wrap: wrap;
-  gap: 10rpx;
-  padding-left: 20rpx;
+  gap: 16rpx;
+  padding-left: 10rpx;
   max-height: 600rpx;
   overflow-y: auto;
 }
 
 .ep {
-  padding: 12rpx 24rpx;
+  padding: 16rpx 24rpx;
   border-radius: 8rpx;
   background: var(--card-hover);
   font-size: var(--text-sm);
@@ -1091,11 +1317,11 @@ function stripHtml(html) {
   line-height: var(--leading-loose);
   letter-spacing: var(--tracking-narrow);
   white-space: pre-wrap;
-  padding-left: 20rpx;
 }
 
 .expand-btn {
   color: var(--accent);
   font-size: var(--text-sm);
+  margin-left: 10rpx;
 }
 </style>

@@ -29,7 +29,7 @@
 					<image class="history-img" src="/static/image/icon_history_sel.png" mode="aspectFit" />
 					<text class="stat-label">观看历史</text>
 				</view>
-				<view class="stat-card">
+				<view class="stat-card" @tap="toCoding">
 					<uni-icons type="download" size="30" color="#fe8027" />
 					<text class="stat-label">我的下载</text>
 				</view>
@@ -149,7 +149,7 @@
 
 			<!-- 关于 -->
 			<view class="about">
-				<text class="version">乐意欧TV v1.0.52</text>
+				<text class="version">乐意欧TV v1.0.55</text>
 			</view>
 		</view>
 
@@ -198,6 +198,7 @@
 </template>
 
 <script setup>
+	import { useTabBack } from '@/utils/useTabBack.js'
 	import {
 		ref,
 		computed,
@@ -239,6 +240,8 @@
 	import {
 		useStatusBar
 	} from '@/utils/useStatusBar.js'
+
+	useTabBack()
 
 	const {
 		statusBarHeight
@@ -432,6 +435,13 @@
 		}
 	}
 
+	const handlePreferencesLoaded = () => {
+		loadUserState()
+		currentCols.value = getSetting('grid_cols', 3)
+		muted.value = getSetting('video_muted', true)
+		longPressSpeed.value = getSetting('long_press_speed', 2)
+	}
+
 	onMounted(() => {
 		// 图片列数（从云端偏好读取）
 		currentCols.value = getSetting('grid_cols', 3)
@@ -444,19 +454,11 @@
 		// 加载用户状态（初始加载一次，后续登录/退出由事件驱动）
 		loadUserState()
 		// 监听登录/退出事件更新 UI + 同步云端偏好到本地
-		uni.$on('preferencesLoaded', () => {
-			loadUserState()
-			// 从云端同步的偏好中读取所有设置并回显
-			currentCols.value = getSetting('grid_cols', 3)
-			muted.value = getSetting('video_muted', true)
-			longPressSpeed.value = getSetting('long_press_speed', 2)
-			const themeVal = getSetting('theme', 'dark')
-			applyThemeChange(themeVal)
-		})
+		uni.$on('preferencesLoaded', handlePreferencesLoaded)
 	})
 
 	onUnmounted(() => {
-		uni.$off('preferencesLoaded')
+		uni.$off('preferencesLoaded', handlePreferencesLoaded)
 	})
 
 	/* ========== 缓存计算 ========== */
@@ -645,6 +647,13 @@
 				})
 				break
 		}
+	}
+	
+	function toCoding(){
+		uni.showToast({
+			title:"暂未开通此功能，请等待更新",
+			duration: 2000
+		})
 	}
 
 	function copySubUrl() {

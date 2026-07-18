@@ -144,6 +144,11 @@ function callLivePlugin(method, args = {}, timeout = 10000) {
 
 /** App 启动时初始化插件（仅初始化配置，不预拉数据） */
 export async function initApp() {
+  // 对齐 fongmi HomeActivity.initConfig：点播与直播在应用启动时并行加载。
+  // 未配置独立直播地址时沿用点播订阅，避免进入卫视页才冷启动解析。
+  const liveUrl = store.liveSubUrl || store.subUrl
+  if (liveUrl) ensureLiveInit(liveUrl).catch(() => {})
+
   if (!store.subUrl) return
   try {
     await ensureInit(store.subUrl)
@@ -153,11 +158,7 @@ export async function initApp() {
   } catch (e) {
     // 初始化失败静默处理
   }
-  // 预热卫视初始化：fongmi 原版在 App 启动即异初始化 LiveConfig，切页命中缓存秒切。
-  // 冷启动拉直播订阅 JSON + LiveParser 解析全频道需 5-10s，提前触发避免切卫视页等待。
-  if (store.liveSubUrl) {
-    ensureLiveInit(store.liveSubUrl).catch(() => {})
-  }
+
 }
 
 // ===== 点播链路：init 缓存（同一 URL 只初始化一次） =====

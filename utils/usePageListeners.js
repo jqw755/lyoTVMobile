@@ -17,13 +17,14 @@ import { onMounted, onUnmounted } from 'vue'
 export function usePageListeners({ mutedRef } = {}) {
   // 静音状态变更
   if (mutedRef) {
+    const handleMutedChanged = (v) => {
+      mutedRef.value = v
+    }
     onMounted(() => {
-      uni.$on('mutedChanged', (v) => {
-        mutedRef.value = v
-      })
+      uni.$on('mutedChanged', handleMutedChanged)
     })
     onUnmounted(() => {
-      uni.$off('mutedChanged')
+      uni.$off('mutedChanged', handleMutedChanged)
     })
   }
 }

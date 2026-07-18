@@ -93,6 +93,7 @@
 </template>
 
 <script setup>
+	import { useTabBack } from '@/utils/useTabBack.js'
 	import {
 	     ref,
 	     computed,
@@ -117,6 +118,8 @@
 	import {
 		useStatusBar
 	} from '@/utils/useStatusBar.js'
+
+	useTabBack()
 
 	const {
 		statusBarHeight
@@ -517,8 +520,9 @@
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			padding: 20rpx 16rpx;
+			padding: 28rpx 18rpx;
 			border-bottom: 1rpx solid var(--border);
+			font-size: var(--text-base);
 
 			&.active {
 				background: var(--accent);
