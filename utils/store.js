@@ -42,7 +42,14 @@ const PREFS_CACHE_KEY = 'lyotv_prefs_cache'
 //
 
 /**
- * App 启动时调用：从本地缓存加载偏好设置（未登录时也能用上次的偏好）
+ * 从本地缓存加载偏好设置（未登录时也能用上次的偏好）
+ *
+ * 关键时序：必须在任何页面 onMounted 之前同步执行。
+ * uni-app 中各 tab 页的 onLoad/onMounted 与 App 的 onMounted 触发顺序
+ * 不保证 App 在前，若放在 App.onMounted 里调用，页面读 getSetting 时
+ * _preferences 仍是 null，会拿到默认值而非用户上次设置。
+ * 因此这里在模块加载时（store.js 被 import 时）同步从 storage 读取，
+ * 保证页面 onMounted 调用 getSetting 时已有正确值。
  */
 export function loadLocalPreferences() {
   _loadLocalPreferences()
@@ -51,11 +58,14 @@ export function loadLocalPreferences() {
 function _loadLocalPreferences() {
   try {
     const saved = uni.getStorageSync(PREFS_CACHE_KEY)
-    if (saved) _preferences = saved
+    if (saved && typeof saved === 'object') _preferences = saved
   } catch {
     // ignore
   }
 }
+
+// 模块加载时同步预热偏好缓存，保证页面 onMounted 之前 _preferences 已填充。
+loadLocalPreferences()
 
 function _saveLocalPreferences() {
   try {

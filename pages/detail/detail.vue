@@ -210,7 +210,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { themeStyle } from "@/utils/theme.js";
 import { usePageListeners } from "@/utils/usePageListeners.js";
-import { onLoad, onShow, onHide } from "@dcloudio/uni-app";
+import { onLoad, onShow, onHide, onBackPress } from "@dcloudio/uni-app";
 import { detail, player, searchSite } from "@/utils/api.js";
 import {
   addFavorite,
@@ -341,6 +341,16 @@ onHide(() => {
   clearSpeedControlTimer();
   showSpeedControl.value = false;
   releaseDetailPlayer(true);
+});
+
+// 全屏时系统返回键先退出全屏，而不是直接 navigateBack/退出应用。
+// 非全屏时走默认返回行为。
+onBackPress(() => {
+  if (isFullscreen.value) {
+    exitFullscreen();
+    return true; // 消费事件，阻止默认返回
+  }
+  return false; // 非全屏：走默认 navigateBack
 });
 
 onBeforeUnmount(() => {
